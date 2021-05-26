@@ -1,4 +1,4 @@
-TARGET=rando
+TARGET=crawler
 CC?=clang
 CFLAGS=-lSDL2 -I./lib -Wall -Wextra -Wpedantic
 CFILES=./src/*.c

@@ -20,6 +20,7 @@ struct game {
 	struct sprites {
 		SDL_Texture **walls;
 		SDL_Texture **arrows;
+		SDL_Texture **font;
 	} sprites;
 	SDL_bool running;
 	int num_maps;

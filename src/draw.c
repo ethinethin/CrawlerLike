@@ -1,9 +1,11 @@
 #include <SDL2/SDL.h>
 #include "cols.h"
 #include "draw.h"
+#include "font.h"
 #include "main.h"
 #include "maze.h"
 #include "user.h"
+#include "wall.h"
 
 /* Function prototypes */
 static void	load_sprites(struct game *cur_game);
@@ -37,14 +39,16 @@ display_init(struct game *cur_game)
 	SDL_SetRenderDrawBlendMode(cur_game->display.renderer, SDL_BLENDMODE_BLEND);
 	/* Create output texture */
 	cur_game->display.output = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1280, 720);
-	/* Load sprites */
+	/* Load sprites and font */
 	load_sprites(cur_game);
+	load_font(cur_game);
 }
 
 void
 display_quit(struct game *cur_game)
 {
 	unload_sprites(cur_game);
+	unload_font(cur_game);
 	SDL_DestroyTexture(cur_game->display.output);
 	SDL_DestroyRenderer(cur_game->display.renderer);
 	cur_game->display.renderer = NULL;
@@ -199,8 +203,13 @@ draw_sprites(struct game *cur_game, SDL_Texture **sprites, int sprite_id, int x,
 void
 draw_screen(struct game *cur_game, struct user *cur_user)
 {
+	char text[100];
+
 	/* Draw map in top left corner */
 	draw_map(cur_game, cur_user, 10, 10);
 	/* Draw walls based on current position */
 	draw_view(cur_game, cur_user);
+	/* Output some text */
+	sprintf(text, "Dungeon Level: %2d", cur_user->map + 1);
+	draw_sentence(cur_game, 10, 340, text, 0.1);
 }

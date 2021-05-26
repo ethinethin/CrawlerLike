@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 #include "draw.h"
+#include "home.h"
 #include "main.h"
 #include "maze.h"
 #include "rand.h"
@@ -12,7 +13,7 @@ struct game GAME = {
 	  720,		/* display.h */
 	  1.0,		/* display.scale_w */
 	  1.0,		/* display.scale_h */
-	  "RandoMaze",	/* display.name */
+	  "CrawlerLike",/* display.name */
 	  NULL,		/* display.window */
 	  NULL,		/* display.renderer */
 	  NULL,		/* display.output */
@@ -20,7 +21,8 @@ struct game GAME = {
 	  SDL_FALSE,	/* display.vsync */
 	  2 },		/* display.mode */
 	{ NULL,		/* sprites.walls */
-	  NULL },	/* sprites.arrows */
+	  NULL,		/* sprites.arrows */
+	  NULL },	/* sprites.font */
 	SDL_FALSE,	/* running */
 	0,		/* num_maps */
 	NULL		/* maps */
@@ -49,13 +51,16 @@ main()
 		render_clear(cur_game, "darkred");
 		draw_screen(cur_game, cur_user);
 		render_present(cur_game);
-		SDL_Delay(33);
+		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
 			cur_game->running = SDL_FALSE;
 		} else if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
+				case SDLK_ESCAPE: /* open title screen */
+					title(cur_game, cur_user, LOADED);
+					break;
 				case SDLK_UP: /* move forward */
 				case SDLK_w:
 					move_player(cur_game->maps + cur_user->map, cur_user, 1);
