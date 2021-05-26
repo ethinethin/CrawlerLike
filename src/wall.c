@@ -4,9 +4,13 @@
 #include "user.h"
 #include "wall.h"
 
-/* These functions, especially the second, are pretty terrible, so that's why I made a
- * new file for them. There is almost definitely a better way to do this, but for now,
- * this is how it is. There is a key to the wall numbers at the bottom... */
+/* I've cleaned these functions up a bit. Setting the wall coordinates is especially a
+ * good bit cleaner. Drawing still needs some work but it's much easier to read now */
+
+/* Function prototypes */
+static void	get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side);
+static void	set_walls(struct user *cur_user, struct coords walls[25]);
+static void	check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25]);
 
 void
 draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
@@ -17,13 +21,15 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 
 	/* Draw map */
 	map_num =  cur_user->map;
+	/* Draw a filled in blue rectangle with a white border */
 	draw_rect(cur_game, x + 1, y + 1, 319, 319, SDL_TRUE, "darkblue");
 	draw_rect(cur_game, x, y, 321, 321, SDL_FALSE, "white");
+	/* Draw all walls adjacent to map spaces */
 	for (i = 1; i < cur_game->maps[map_num].rows - 1; i += 2) {
 		for (j = 1; j < cur_game->maps[map_num].cols - 1; j += 2) {
-			x_coord = j/2;
-			y_coord = i/2;
-			/* Only draw the walls if the room has been seen */
+			/* This flattens the coordinates to account for even-numbered wall grids */
+			x_coord = j/2; y_coord = i/2;
+			/* Only draw if the space has been seen */
 			if (*(*(cur_user->seen[cur_user->map].tiles + i) + j) == 1) {
 				draw_rect(cur_game, x + x_coord * 20, y + y_coord * 20, 20, 20, SDL_TRUE, "black");
 				if (cur_game->maps[map_num].tiles[i - 1][j] == WALL) {
@@ -43,12 +49,88 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 				} else if (cur_game->maps[map_num].tiles[i][j] == END) {
 					draw_rect(cur_game, x + x_coord * 20 + 7, y + y_coord * 20 + 7, 6, 6, SDL_TRUE, "white");
 				}
-				if (cur_user->row == i && cur_user->col == j) {
-					draw_sprites(cur_game, cur_game->sprites.arrows, cur_user->facing, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
-				}
 			} else {
+				/* Draw a small white square if the room has not been seen */
 				draw_rect(cur_game, x + x_coord * 20 + 9, y + y_coord * 20 + 9, 2, 2, SDL_TRUE, "white");
 			}
+		}
+	}
+	/* Draw the player arrow */
+	x_coord = cur_user->col/2; y_coord = cur_user->row/2;
+	draw_sprites(cur_game, cur_game->sprites.arrows, cur_user->facing, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
+}
+
+static void
+get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side)
+{
+	/* Depending on facing, forward and sides are different parameters */
+	if (cur_user->facing == NORTH) {
+		cur_wall->row = cur_user->row - forward;
+		cur_wall->col = cur_user->col + side;
+	} else if (cur_user->facing == EAST) {
+		cur_wall->col = cur_user->col + forward;
+		cur_wall->row = cur_user->row + side;
+	} else if (cur_user->facing == SOUTH) {
+		cur_wall->row = cur_user->row + forward;
+		cur_wall->col = cur_user->col - side;
+	} else if (cur_user->facing == WEST) {
+		cur_wall->col = cur_user->col - forward;
+		cur_wall->row = cur_user->row - side;
+	}
+}
+
+/* Key for walls in front of the player (pl) that need to be rendered. All
+ * numbers are walls that need to be rendered, either front walls (e.g.
+ * 2-4, 9-13, 20-24) or side walls (0-1, 5-8, 14-19).
+ *
+ *	XX 20 XX 21 XX 22 XX 23 XX 24 XX
+ *	14 .. 15 .. 16 .. 17 .. 18 .. 19
+ *	XX  9 XX 10 XX 11 XX 12 XX 13 XX
+ *	XX ..  5 ..  6 ..  7 ..  8 .. XX
+ *	XX XX XX  2 XX  3 XX  4 XX XX XX
+ *	XX .. XX ..  0 pl  1 .. XX .. XX
+ */
+static void
+set_walls(struct user *cur_user, struct coords walls[25])
+{
+	/* Set all coordinates based on key above */
+	get_coords(cur_user, &walls[0], 0, -1);
+	get_coords(cur_user, &walls[1], 0, 1);
+	get_coords(cur_user, &walls[2], 1, -2);
+	get_coords(cur_user, &walls[3], 1, 0);
+	get_coords(cur_user, &walls[4], 1, 2);
+	get_coords(cur_user, &walls[5], 2, -3);
+	get_coords(cur_user, &walls[6], 2, -1);
+	get_coords(cur_user, &walls[7], 2, 1);
+	get_coords(cur_user, &walls[8], 2, 3);
+	get_coords(cur_user, &walls[9], 3, -4);
+	get_coords(cur_user, &walls[10], 3, -2);
+	get_coords(cur_user, &walls[11], 3, 0);
+	get_coords(cur_user, &walls[12], 3, 2);
+	get_coords(cur_user, &walls[13], 3, 4);
+	get_coords(cur_user, &walls[14], 4, -5);
+	get_coords(cur_user, &walls[15], 4, -3);
+	get_coords(cur_user, &walls[16], 4, -1);
+	get_coords(cur_user, &walls[17], 4, 1);
+	get_coords(cur_user, &walls[18], 4, 3);
+	get_coords(cur_user, &walls[19], 4, 5);
+	get_coords(cur_user, &walls[20], 5, -4);
+	get_coords(cur_user, &walls[21], 5, -2);
+	get_coords(cur_user, &walls[22], 5, 0);
+	get_coords(cur_user, &walls[23], 5, 2);
+	get_coords(cur_user, &walls[24], 5, 4);
+}
+
+static void
+check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25])
+{
+	int i;
+	for (i = 0; i < 25; i++) {
+		if (walls[i].row < 0 || walls[i].row > cur_game->maps[cur_user->map].rows - 1 ||
+		    walls[i].col < 0 || walls[i].col > cur_game->maps[cur_user->map].cols - 1) {
+		    	/* Wall outside of range, set to user position (ROOM) */
+		    	walls[i].row = cur_user->row;
+		    	walls[i].col = cur_user->col;
 		}
 	}
 }
@@ -56,7 +138,6 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 void
 draw_view(struct game *cur_game, struct user *cur_user)
 {
-	int i;
 	struct coords walls[25];
 
 	/* Set up viewport texture and output to it */
@@ -65,143 +146,12 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	/* Draw black background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");
 	/* Determine values for all walls depending on user facing */
-	/* The key to wall numbers are given below the function */
-	if (cur_user->facing == NORTH) {
-		walls[0].row = cur_user->row; walls[0].col = cur_user->col - 1;
-		walls[1].row = cur_user->row; walls[1].col = cur_user->col + 1;
-		
-		walls[2].row = cur_user->row - 1; walls[2].col = cur_user->col - 2;
-		walls[3].row = cur_user->row - 1; walls[3].col = cur_user->col;
- 		walls[4].row = cur_user->row - 1; walls[4].col = cur_user->col + 2;
- 		
-  		walls[5].row = cur_user->row - 2; walls[5].col = cur_user->col - 3;
-		walls[6].row = cur_user->row - 2; walls[6].col = cur_user->col - 1;
-		walls[7].row = cur_user->row - 2; walls[7].col = cur_user->col + 1;
- 		walls[8].row = cur_user->row - 2; walls[8].col = cur_user->col + 3;
- 		
- 		walls[9].row = cur_user->row - 3; walls[9].col = cur_user->col - 4; 		
- 		walls[10].row = cur_user->row - 3; walls[10].col = cur_user->col - 2;
- 		walls[11].row = cur_user->row - 3; walls[11].col = cur_user->col;
- 		walls[12].row = cur_user->row - 3; walls[12].col = cur_user->col + 2;
- 		walls[13].row = cur_user->row - 3; walls[13].col = cur_user->col + 4;
- 
- 		walls[14].row = cur_user->row - 4; walls[14].col = cur_user->col - 5;
-		walls[15].row = cur_user->row - 4; walls[15].col = cur_user->col - 3;
-		walls[16].row = cur_user->row - 4; walls[16].col = cur_user->col - 1;
-		walls[17].row = cur_user->row - 4; walls[17].col = cur_user->col + 1;
- 		walls[18].row = cur_user->row - 4; walls[18].col = cur_user->col + 3;
- 		walls[19].row = cur_user->row - 4; walls[19].col = cur_user->col + 5;
- 		
- 		walls[20].row = cur_user->row - 5; walls[20].col = cur_user->col - 4;
- 		walls[21].row = cur_user->row - 5; walls[21].col = cur_user->col - 2;
- 		walls[22].row = cur_user->row - 5; walls[22].col = cur_user->col;
- 		walls[23].row = cur_user->row - 5; walls[23].col = cur_user->col + 2;
- 		walls[24].row = cur_user->row - 5; walls[24].col = cur_user->col + 4;
-	} else if (cur_user->facing == EAST) {
-		walls[0].row = cur_user->row - 1; walls[0].col = cur_user->col;
-		walls[1].row = cur_user->row + 1; walls[1].col = cur_user->col;
-		
-		walls[2].row = cur_user->row - 2; walls[2].col = cur_user->col + 1;
-		walls[3].row = cur_user->row; walls[3].col = cur_user->col + 1;
-		walls[4].row = cur_user->row + 2; walls[4].col = cur_user->col + 1;
-		
-		walls[5].row = cur_user->row - 3; walls[5].col = cur_user->col + 2;
-		walls[6].row = cur_user->row - 1; walls[6].col = cur_user->col + 2;
-		walls[7].row = cur_user->row + 1; walls[7].col = cur_user->col + 2;
-		walls[8].row = cur_user->row + 3; walls[8].col = cur_user->col + 2;
-		
-		walls[9].row = cur_user->row - 4; walls[9].col = cur_user->col + 3;		
-		walls[10].row = cur_user->row - 2; walls[10].col = cur_user->col + 3;
-		walls[11].row = cur_user->row; walls[11].col = cur_user->col + 3;
-		walls[12].row = cur_user->row + 2; walls[12].col = cur_user->col + 3;
-		walls[13].row = cur_user->row + 4; walls[13].col = cur_user->col + 3;
-
-		walls[14].row = cur_user->row - 5; walls[14].col = cur_user->col + 4;
-		walls[15].row = cur_user->row - 3; walls[15].col = cur_user->col + 4;
-		walls[16].row = cur_user->row - 1; walls[16].col = cur_user->col + 4;
-		walls[17].row = cur_user->row + 1; walls[17].col = cur_user->col + 4;
-		walls[18].row = cur_user->row + 3; walls[18].col = cur_user->col + 4;
-		walls[19].row = cur_user->row + 5; walls[19].col = cur_user->col + 4;
-		
-		walls[20].row = cur_user->row - 4; walls[20].col = cur_user->col + 5;
-		walls[21].row = cur_user->row - 2; walls[21].col = cur_user->col + 5;
-		walls[22].row = cur_user->row; walls[22].col = cur_user->col + 5;
-		walls[23].row = cur_user->row + 2; walls[23].col = cur_user->col + 5;
-		walls[24].row = cur_user->row + 4; walls[24].col = cur_user->col + 5;
-	} else if (cur_user->facing == SOUTH) {
-		walls[0].row = cur_user->row; walls[0].col = cur_user->col + 1;
-		walls[1].row = cur_user->row; walls[1].col = cur_user->col - 1;
-		
-		walls[2].row = cur_user->row + 1; walls[2].col = cur_user->col + 2;
-		walls[3].row = cur_user->row + 1; walls[3].col = cur_user->col;
-		walls[4].row = cur_user->row + 1; walls[4].col = cur_user->col - 2;
-			
-		walls[5].row = cur_user->row + 2; walls[5].col = cur_user->col + 3;
-		walls[6].row = cur_user->row + 2; walls[6].col = cur_user->col + 1;
-		walls[7].row = cur_user->row + 2; walls[7].col = cur_user->col - 1;
-		walls[8].row = cur_user->row + 2; walls[8].col = cur_user->col - 3;
-		
-		walls[9].row = cur_user->row + 3; walls[9].col = cur_user->col + 4;
-		walls[10].row = cur_user->row + 3; walls[10].col = cur_user->col + 2;
-		walls[11].row = cur_user->row + 3; walls[11].col = cur_user->col;
-		walls[12].row = cur_user->row + 3; walls[12].col = cur_user->col - 2;
-		walls[13].row = cur_user->row + 3; walls[13].col = cur_user->col - 4;
-
-		walls[14].row = cur_user->row + 4; walls[14].col = cur_user->col + 5;
-		walls[15].row = cur_user->row + 4; walls[15].col = cur_user->col + 3;
-		walls[16].row = cur_user->row + 4; walls[16].col = cur_user->col + 1;
-		walls[17].row = cur_user->row + 4; walls[17].col = cur_user->col - 1;
-		walls[18].row = cur_user->row + 4; walls[18].col = cur_user->col - 3;
-		walls[19].row = cur_user->row + 4; walls[19].col = cur_user->col - 5;
-		
-		walls[20].row = cur_user->row + 5; walls[20].col = cur_user->col + 4;
-		walls[21].row = cur_user->row + 5; walls[21].col = cur_user->col + 2;
-		walls[22].row = cur_user->row + 5; walls[22].col = cur_user->col;
-		walls[23].row = cur_user->row + 5; walls[23].col = cur_user->col - 2;
-		walls[24].row = cur_user->row + 5; walls[24].col = cur_user->col - 4;
-	} else if (cur_user->facing == WEST) {
-		walls[0].row = cur_user->row + 1; walls[0].col = cur_user->col;
-		walls[1].row = cur_user->row - 1; walls[1].col = cur_user->col;
-		
-		walls[2].row = cur_user->row + 2; walls[2].col = cur_user->col - 1;
-		walls[3].row = cur_user->row; walls[3].col = cur_user->col - 1;
-		walls[4].row = cur_user->row - 2; walls[4].col = cur_user->col - 1;
-		
-		walls[5].row = cur_user->row + 3; walls[5].col = cur_user->col - 2;
-		walls[6].row = cur_user->row + 1; walls[6].col = cur_user->col - 2;
-		walls[7].row = cur_user->row - 1; walls[7].col = cur_user->col - 2;
-		walls[8].row = cur_user->row - 3; walls[8].col = cur_user->col - 2;
-		
-		walls[9].row = cur_user->row + 4; walls[9].col = cur_user->col - 3;
-		walls[10].row = cur_user->row + 2; walls[10].col = cur_user->col - 3;
-		walls[11].row = cur_user->row; walls[11].col = cur_user->col - 3;
-		walls[12].row = cur_user->row - 2; walls[12].col = cur_user->col - 3;
-		walls[13].row = cur_user->row - 4; walls[13].col = cur_user->col - 3;
-
-		walls[14].row = cur_user->row + 5; walls[14].col = cur_user->col - 4;
-		walls[15].row = cur_user->row + 3; walls[15].col = cur_user->col - 4;
-		walls[16].row = cur_user->row + 1; walls[16].col = cur_user->col - 4;
-		walls[17].row = cur_user->row - 1; walls[17].col = cur_user->col - 4;
-		walls[18].row = cur_user->row - 3; walls[18].col = cur_user->col - 4;
-		walls[19].row = cur_user->row - 5; walls[19].col = cur_user->col - 4;
-		
-		walls[20].row = cur_user->row + 4; walls[20].col = cur_user->col - 5;
-		walls[21].row = cur_user->row + 2; walls[21].col = cur_user->col - 5;
-		walls[22].row = cur_user->row; walls[22].col = cur_user->col - 5;
-		walls[23].row = cur_user->row - 2; walls[23].col = cur_user->col - 5;
-		walls[24].row = cur_user->row - 4; walls[24].col = cur_user->col - 5;
-	}
-	/* Make sure the wall checks are within the map range - if not, set to user square (no wall) */
-	for (i = 0; i < 25; i++) {
-		if (walls[i].row < 0 || walls[i].row > cur_game->maps[cur_user->map].rows - 1 ||
-		    walls[i].col < 0 || walls[i].col > cur_game->maps[cur_user->map].cols - 1) {
-		    	walls[i].row = cur_user->row;
-		    	walls[i].col = cur_user->col;
-		}
-	}
-	// reference: window 927 x 698 at (342, 11)
+	set_walls(cur_user, walls);
+	/* Make sure the wall checks are within the map range */
+	check_walls(cur_game, cur_user, walls);
+	/* View window is 927 x 698 at (342, 11) */
 	int x_val = 342; int y_val = 11;
-	/* KLMNO - 20, 21, 22, 23, 24 (125x100) */
+	/* 20, 21, 22, 23, 24 (125x100) */
 	if (*(*(cur_game->maps[cur_user->map].tiles + walls[20].row) + walls[20].col) == WALL) {
 		draw_rect(cur_game, 151 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
 		draw_sprites(cur_game, cur_game->sprites.walls, 0, 151 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
@@ -222,7 +172,7 @@ draw_view(struct game *cur_game, struct user *cur_user)
 		draw_rect(cur_game, 651 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
 		draw_sprites(cur_game, cur_game->sprites.walls, 0, 651 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
 	}
-	/* EFGHIJ - 14, 15, 16, 17, 18, 19 (200x62) */
+	/* 14, 15, 16, 17, 18, 19 (200x62) */
 	if (*(*(cur_game->maps[cur_user->map].tiles + walls[14].row) + walls[14].col) == WALL) {
 		draw_rect(cur_game, -159 + x_val, 249 + y_val, 310, 200, SDL_TRUE, "black");
 		draw_sprites(cur_game, cur_game->sprites.walls, 1, -159 + x_val, 249 + y_val, 310, 200, 105, SDL_FALSE);
@@ -313,12 +263,3 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	/* Reset the render target */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.output);
 }
-
-// Key: walls in front of the player (p) that need to render
-// X K X L X M X N X O X	. = potential room, no rendering needed
-// E . F . G . H . I . J	X = part of the grid
-// X 9 X A X B X C X D X	1-9, A-O = wall_1, wall_2, ... wall_A, ..etc. above
-// X . 5 . 6 . 7 . 8 . X
-// X X X 2 X 3 X 4 X X X
-// X . X . 0 p 1 . X . X
-
