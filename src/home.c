@@ -12,6 +12,8 @@ static void		saveload(struct game *cur_game, struct user *cur_user);
 static void		draw_saveload(struct game *cur_game);
 static SDL_bool		options(struct game *cur_game);
 static void		draw_options(struct game *cur_game);
+static SDL_bool		yes_no(struct game *cur_game, char *message);
+static void		draw_yesno(struct game *cur_game, char *message);
 
 void
 title(struct game *cur_game, struct user *cur_user, int state)
@@ -64,8 +66,10 @@ title_click(struct game *cur_game, struct user *cur_user, int state, int x, int 
 		return SDL_FALSE;
 	} else if (x >= 100 && x <= 280) {
 		if (y >= 187 && y < 207) {
-			printf("New game clicked\n");
-			/* I don't have this implemented yet */
+			if (state == LOADED && yes_no(cur_game, "Game in progress will be lost.\nContinue?") == SDL_TRUE) {
+				/* Make a new game */
+				printf("Making a new game!\n");
+			}
 		} else if (y >= 212 && y < 232) {
 			printf("Load game clicked\n");
 			/* I don't have saving and loading implemented yet */
@@ -156,4 +160,67 @@ draw_options(struct game *cur_game)
 	draw_sentence(cur_game, 600, 503, "  2560x1600 ", 0.1);
 	draw_sentence(cur_game, 600, 528, "  3840x2160 ", 0.1);
 	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
+}
+
+
+static SDL_bool
+yes_no(struct game *cur_game, char *message)
+{
+	SDL_Event event;
+	SDL_bool loop;
+	SDL_bool answer;
+	
+	loop = SDL_TRUE;
+	while (loop == SDL_TRUE) {
+		/* draw yesno screen - this renders a yes no box on top of the previously rendered window */
+		draw_yesno(cur_game, message);
+		SDL_Delay(10);
+		/* poll for an event */
+		if (SDL_PollEvent(&event) == 0) continue;
+		if (event.type == SDL_KEYDOWN) {
+			switch (event.key.keysym.sym) {
+				case SDLK_y:
+					answer = SDL_TRUE;
+					loop = SDL_FALSE;
+					break;
+				default:
+					answer = SDL_FALSE;
+					loop = SDL_FALSE;
+					break;
+			}
+		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+			/* Clicking in options at
+				event.button.x / cur_game->display.scale_w
+				event.button.y / cur_game->display.scale_h
+			*/
+		}
+	}
+	return answer;
+}
+
+static void
+draw_yesno(struct game *cur_game, char *message)
+{
+	SDL_Rect src = { 0, 0, 1280, 720 };
+	SDL_Rect dest = { 0, 0, cur_game->display.w, cur_game->display.h };
+
+	/* Reset render target to the renderer */
+	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
+	/* Clear the renderer */
+	SDL_RenderClear(cur_game->display.renderer);
+	/* Copy the output texture to the renderer */
+	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &src, &dest);
+	/* Render a yesno box - scaled */
+	draw_rect(cur_game,
+		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
+		  600 * cur_game->display.scale_w, 200 * cur_game->display.scale_w,
+		  SDL_TRUE, "black");
+	draw_rect(cur_game,
+		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
+		  600 * cur_game->display.scale_w, 200 * cur_game->display.scale_w,
+		  SDL_FALSE, "white");
+	draw_sentence(cur_game, 350 * cur_game->display.scale_w, 250 * cur_game->display.scale_h, message, 0.1 * cur_game->display.scale_w);
+	draw_sentence(cur_game, 380 * cur_game->display.scale_w, 330 * cur_game->display.scale_h, "      Yes          No", 0.1 * cur_game->display.scale_w);
+	/* Present */
+	SDL_RenderPresent(cur_game->display.renderer);
 }

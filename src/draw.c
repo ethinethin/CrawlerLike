@@ -18,9 +18,10 @@ display_init(struct game *cur_game)
 
 	/* Create the main window */
 	if (cur_game->display.mode == 0) {
-		SDL_GetDesktopDisplayMode(0, &dm);
+		printf("%d\n", SDL_GetDesktopDisplayMode(0, &dm));
 		cur_game->display.w = dm.w;
 		cur_game->display.h = dm.h;
+		printf("%d %d\n", dm.w, dm.h);
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else if (cur_game->display.mode == 1) {
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN);
@@ -57,7 +58,7 @@ display_quit(struct game *cur_game)
 }
 
 /* Sprite information */
-int num_walls = 2;
+int num_walls = 8;
 int sprite_w = 64;
 int sprite_h = 64;
 static void
@@ -134,7 +135,7 @@ render_clear(struct game *cur_game, char *col)
 void
 render_present(struct game *cur_game)
 {
-	SDL_Rect src = { 0, 0, 1290, 720 };
+	SDL_Rect src = { 0, 0, 1280, 720 };
 	SDL_Rect dest = { 0, 0, cur_game->display.w, cur_game->display.h };
 	SDL_Rect view = { 341, 10, 929, 700 };
 	SDL_Rect view_out = { 341 * cur_game->display.scale_w, 10 * cur_game->display.scale_h, 929 * cur_game->display.scale_w, 700  * cur_game->display.scale_h };	

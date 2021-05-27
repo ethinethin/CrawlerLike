@@ -40,7 +40,9 @@ main()
 	SDL_Event event;
 	struct game *cur_game;
 	struct user *cur_user;
+	
 	/* Initialize the game */
+	SDL_Init(SDL_INIT_EVERYTHING);
 	cur_game = &GAME;
 	cur_user = &USER;
 	new_game(cur_game, cur_user, 20, 16, 16);
@@ -87,6 +89,7 @@ main()
 
 	/* Free memory and exit */
 	exit_game(cur_game, cur_user);
+	SDL_Quit();
 	return 0;
 }
 

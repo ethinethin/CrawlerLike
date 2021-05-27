@@ -40,6 +40,6 @@ struct map {
 	struct coords end;
 };
 
-enum room { WALL, ROOM, UNKNOWN, POTENTIAL, START, END };
+enum room { WALL, ROOM, UNKNOWN, POTENTIAL, START, END, DOOR };
 
 #endif

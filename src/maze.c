@@ -13,8 +13,7 @@ static void	rand_potential_room(struct map *cur_map, struct coords *pos, int cou
 static int	maze_entrances(struct map *cur_map, int row, int col);
 static void	remove_wall(struct map *cur_map, int row, int col, int count);
 static int	count_rooms(struct map *cur_map);
-static void	remove_random_walls(struct map *cur_map);
-
+static void	make_dungeon(struct map *cur_map);
 
 void
 init_map(struct map *cur_map, int rows, int cols)
@@ -84,7 +83,7 @@ populate_map(struct map *cur_map, int row_start, int col_start)
 	cur_map->end.row = room->row;
 	cur_map->end.col = room->col;
 	/* Remove some random walls */
-	remove_random_walls(cur_map);
+	make_dungeon(cur_map);
 	free(room);
 }
 
@@ -201,7 +200,7 @@ count_rooms(struct map *cur_map)
 }
 
 static void
-remove_random_walls(struct map *cur_map)
+make_dungeon(struct map *cur_map)
 {
 	int i, j;
 
@@ -213,6 +212,10 @@ remove_random_walls(struct map *cur_map)
 			     (*(*(cur_map->tiles + i) + j - 1) == ROOM && *(*(cur_map->tiles + i) + j + 1) == ROOM))) {
 			    	if (rand_num(0, 99) >= 70) {
 			    		*(*(cur_map->tiles + i) + j) = ROOM;
+			    		continue;
+			    	}
+			    	if (rand_num(0, 99) >= 90) {
+			    		*(*(cur_map->tiles + i) + j) = DOOR;
 			    	}
 			}
 		}

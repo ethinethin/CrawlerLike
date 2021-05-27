@@ -10,12 +10,34 @@ struct user {
 	int facing;
 	int num_seen;
 	struct seen *seen;
+	struct character *character;
 };
 
 struct seen {
 	int rows;
 	int cols;
 	int **tiles;
+};
+
+struct character {
+	char *name;
+	struct stats {
+		int life;
+		int energy;
+		int focus;
+		int experience;
+		int attack;
+		int defense;
+		int dodge;
+		int power;
+		int spirit;
+		int avoid;
+	} cur_stats;
+	struct stats max_stats;
+	int money;
+	void *inventory[8];
+	void *gear[3];
+	void *skills[3];
 };
 
 enum dirs { NORTH, EAST, SOUTH, WEST };

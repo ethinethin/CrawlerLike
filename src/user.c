@@ -54,7 +54,8 @@ move_player(struct map *cur_map, struct user *cur_user, int move)
 	row_d *= move;
 	col_d *= move;
 	/* See if the move is okay */
-	if (*(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == ROOM) {
+	if (*(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == ROOM ||
+	    *(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == DOOR) {
 		cur_user->row += row_d * 2;
 		cur_user->col += col_d * 2;
 		return SDL_TRUE;

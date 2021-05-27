@@ -11,6 +11,7 @@
 static void	get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side);
 static void	set_walls(struct user *cur_user, struct coords walls[25]);
 static void	check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25]);
+static void	draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, struct coords *wall_coords, int wall_num, int sprite_num);
 
 void
 draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
@@ -32,17 +33,26 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 			/* Only draw if the space has been seen */
 			if (*(*(cur_user->seen[cur_user->map].tiles + i) + j) == 1) {
 				draw_rect(cur_game, x + x_coord * 20, y + y_coord * 20, 20, 20, SDL_TRUE, "black");
+				/* North Wall/Door */
 				if (cur_game->maps[map_num].tiles[i - 1][j] == WALL) {
 					draw_line(cur_game, x + x_coord * 20, y + y_coord * 20, x + (x_coord + 1) * 20, y + y_coord * 20, "white");
+				} else if (cur_game->maps[map_num].tiles[i - 1][j] == DOOR) {
+					draw_rect(cur_game, x + x_coord * 20 + 1, y + y_coord * 20 - 1, 19, 3, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i][j + 1] == WALL) {
 					draw_line(cur_game, x + (x_coord + 1) * 20, y + y_coord * 20, x + (x_coord + 1) * 20, y + (y_coord + 1) * 20, "white");
+				} else if (cur_game->maps[map_num].tiles[i][j + 1] == DOOR) {
+					draw_rect(cur_game, x + x_coord * 20 + 19, y + y_coord * 20 + 1, 3, 19, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i + 1][j] == WALL) {
 					draw_line(cur_game, x + x_coord * 20, y + (y_coord + 1) * 20, x + (x_coord + 1) * 20, y + (y_coord + 1) * 20, "white");
+				} else if (cur_game->maps[map_num].tiles[i + 1][j] == DOOR) {
+					draw_rect(cur_game, x + x_coord * 20 + 1, y + y_coord * 20 + 19, 19, 3, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i][j - 1] == WALL) {
 					draw_line(cur_game, x + x_coord * 20, y + y_coord * 20, x + x_coord * 20, y + (y_coord + 1) * 20, "white");
+				} else if (cur_game->maps[map_num].tiles[i][j - 1] == DOOR) {
+					draw_rect(cur_game, x + x_coord * 20 - 1, y + y_coord * 20 + 1, 3, 19, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i][j] == START) {
 					draw_rect(cur_game, x + x_coord * 20 + 5, y + y_coord * 20 + 5, 10, 10, SDL_TRUE, "white");
@@ -135,10 +145,76 @@ check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25
 	}
 }
 
+struct wall_dim {
+	int wall_num;
+	int sprite;
+	SDL_Rect dim;
+	SDL_bool flip;
+} wall_dim[25] = {
+	{ 0, 1, { -37, -51, 250, 800 }, SDL_FALSE },
+	{ 1, 1, { 713, -51, 250, 800 }, SDL_TRUE }, 
+	{ 2, 0, { -287, 149, 500, 400 }, SDL_FALSE }, 
+	{ 3, 0, { 213, 149, 500, 400 }, SDL_FALSE }, 
+	{ 4, 0, { 713, 149, 500, 400 }, SDL_FALSE }, 
+	{ 5, 1, { -288, 149, 376, 400 }, SDL_FALSE }, 
+	{ 6, 1, { 213, 149, 125, 400 }, SDL_FALSE }, 
+	{ 7, 1, { 588, 149, 125, 400 }, SDL_TRUE }, 
+	{ 8, 1, { 838, 149, 376, 400 }, SDL_TRUE }, 
+	{ 9, 0, { -162, 249, 250, 200 }, SDL_FALSE }, 
+	{ 10, 0, { 88, 249, 250, 200 }, SDL_FALSE }, 
+	{ 11, 0, { 338, 249, 250, 200 }, SDL_FALSE }, 
+	{ 12, 0, { 588, 249, 250, 200 }, SDL_FALSE }, 
+	{ 13, 0, { 838, 249, 250, 200 }, SDL_FALSE }, 
+	{ 14, 1, { -159, 249, 310, 200 }, SDL_FALSE }, 
+	{ 15, 1, { 88, 249, 188, 200 }, SDL_FALSE }, 
+	{ 16, 1, { 338, 249, 63, 200 }, SDL_FALSE }, 
+	{ 17, 1, { 526, 249, 62, 200 }, SDL_TRUE }, 
+	{ 18, 1, { 651, 249, 188, 200 }, SDL_TRUE }, 
+	{ 19, 1, { 776, 249, 310, 200 }, SDL_TRUE }, 
+	{ 20, 0, { 151, 299, 125, 100 }, SDL_FALSE }, 
+	{ 21, 0, { 276, 299, 125, 100 }, SDL_FALSE }, 
+	{ 22, 0, { 401, 299, 125, 100 }, SDL_FALSE }, 
+	{ 23, 0, { 526, 299, 125, 100 }, SDL_FALSE }, 
+	{ 24, 0, { 651, 299, 125, 100 }, SDL_FALSE }
+};
+
+static void
+draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, struct coords *wall_coords, int wall_num, int sprite_num)
+{
+	int x_val = 342;
+	int y_val = 11;
+	
+	/* Check if you need to render the wall */
+	switch(*(*(cur_game->maps[cur_user->map].tiles + wall_coords[wall_num].row) + wall_coords[wall_num].col)) {
+		case WALL:
+			draw_sprites(cur_game, walls,
+				     sprite_num + wall_dim[wall_num].sprite,
+				     wall_dim[wall_num].dim.x + x_val,
+				     wall_dim[wall_num].dim.y + y_val,
+				     wall_dim[wall_num].dim.w,
+				     wall_dim[wall_num].dim.h,
+				     255,
+				     wall_dim[wall_num].flip);
+			break;
+		case DOOR:
+			draw_sprites(cur_game, walls,
+				     sprite_num + wall_dim[wall_num].sprite + 2,
+				     wall_dim[wall_num].dim.x + x_val,
+				     wall_dim[wall_num].dim.y + y_val,
+				     wall_dim[wall_num].dim.w,
+				     wall_dim[wall_num].dim.h,
+				     255,
+				     wall_dim[wall_num].flip);
+			break;
+	}
+}
+
 void
 draw_view(struct game *cur_game, struct user *cur_user)
 {
+	int i;
 	struct coords walls[25];
+	int draw_order[25] = { 20, 21, 22, 23, 24, 14, 15, 16, 17, 19, 18, 9, 10, 11, 12, 13, 5, 6, 7, 8, 2, 3, 4, 0, 1 };
 
 	/* Set up viewport texture and output to it */
 	cur_game->display.view = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1280, 720);
@@ -149,114 +225,9 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	set_walls(cur_user, walls);
 	/* Make sure the wall checks are within the map range */
 	check_walls(cur_game, cur_user, walls);
-	/* View window is 927 x 698 at (342, 11) */
-	int x_val = 342; int y_val = 11;
-	/* 20, 21, 22, 23, 24 (125x100) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[20].row) + walls[20].col) == WALL) {
-		draw_rect(cur_game, 151 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 151 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[21].row) + walls[21].col) == WALL) {
-		draw_rect(cur_game, 276 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 276 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[22].row) + walls[22].col) == WALL) {
-		draw_rect(cur_game, 401 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 401 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[23].row) + walls[23].col) == WALL) {
-		draw_rect(cur_game, 526 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 526 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[24].row) + walls[24].col) == WALL) {
-		draw_rect(cur_game, 651 + x_val, 299 + y_val, 125, 100, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 651 + x_val, 299 + y_val, 125, 100, 105, SDL_FALSE);
-	}
-	/* 14, 15, 16, 17, 18, 19 (200x62) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[14].row) + walls[14].col) == WALL) {
-		draw_rect(cur_game, -159 + x_val, 249 + y_val, 310, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, -159 + x_val, 249 + y_val, 310, 200, 105, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[15].row) + walls[15].col) == WALL) {
-		draw_rect(cur_game, 88 + x_val, 249 + y_val, 188, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 88 + x_val, 249 + y_val, 188, 200, 130, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[16].row) + walls[16].col) == WALL) {
-		draw_rect(cur_game, 339 + x_val, 249 + y_val, 62, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 339 + x_val, 249 + y_val, 62, 200, 155, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[17].row) + walls[17].col) == WALL) {
-		draw_rect(cur_game, 526 + x_val, 249 + y_val, 62, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 526 + x_val, 249 + y_val, 62, 200, 155, SDL_TRUE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[19].row) + walls[19].col) == WALL) {
-		/* 19 overlaps 18 so draw it first */
-		draw_rect(cur_game, 776 + x_val, 249 + y_val, 310, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 776 + x_val, 249 + y_val, 310, 200, 105, SDL_TRUE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[18].row) + walls[18].col) == WALL) {
-		draw_rect(cur_game, 651 + x_val, 249 + y_val, 188, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 651 + x_val, 249 + y_val, 188, 200, 130, SDL_TRUE);
-	}
-	/* If there are walls one space in front of you, draw them (250x200) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[9].row) + walls[9].col) == WALL) {
-		draw_rect(cur_game, -162 + x_val, 249 + y_val, 250, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, -162 + x_val, 249 + y_val, 250, 200, 180, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[10].row) + walls[10].col) == WALL) {
-		draw_rect(cur_game, 88 + x_val, 249 + y_val, 250, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 88 + x_val, 249 + y_val, 250, 200, 180, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[11].row) + walls[11].col) == WALL) {
-		draw_rect(cur_game, 338 + x_val, 249 + y_val, 250, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 338 + x_val, 249 + y_val, 250, 200, 180, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[12].row) + walls[12].col) == WALL) {
-		draw_rect(cur_game, 588 + x_val, 249 + y_val, 250, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 588 + x_val, 249 + y_val, 250, 200, 180, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[13].row) + walls[13].col) == WALL) {
-		draw_rect(cur_game, 838 + x_val, 249 + y_val, 250, 200, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 838 + x_val, 249 + y_val, 250, 200, 180, SDL_FALSE);
-	}
-	/* If there are walls to the side in front of you, draw them (400x125) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[5].row) + walls[5].col) == WALL) {
-		draw_rect(cur_game, -288 + x_val, 149 + y_val, 376, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, -288 + x_val, 149 + y_val, 376, 400, 180, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[6].row) + walls[6].col) == WALL) {
-		draw_rect(cur_game, 213 + x_val, 149 + y_val, 125, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 213 + x_val, 149 + y_val, 125, 400, 205, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[7].row) + walls[7].col) == WALL) {
-		draw_rect(cur_game, 588 + x_val, 149 + y_val, 125, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 588 + x_val, 149 + y_val, 125, 400, 205, SDL_TRUE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[8].row) + walls[8].col) == WALL) {
-		draw_rect(cur_game, 838 + x_val, 149 + y_val, 376, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 838 + x_val, 149 + y_val, 376, 400, 180, SDL_TRUE);
-	}
-	/* If there are walls in front of you, draw them (500x400) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[2].row) + walls[2].col) == WALL) {
-		draw_rect(cur_game, -287 + x_val, 149 + y_val, 500, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, -287 + x_val, 149 + y_val, 500, 400, 230, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[3].row) + walls[3].col) == WALL) {
-		draw_rect(cur_game, 213 + x_val, 149 + y_val, 500, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 213 + x_val, 149 + y_val, 500, 400, 230, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[4].row) + walls[4].col) == WALL) {
-		draw_rect(cur_game, 713 + x_val, 149 + y_val, 500, 400, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 0, 713 + x_val, 149 + y_val, 500, 400, 230, SDL_FALSE);
-	}
-	/* If there are walls to the sides, draw them (800x250) */
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[0].row) + walls[0].col) == WALL) {
-		draw_rect(cur_game, -37 + x_val, -51 + y_val, 250, 800, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, -37 + x_val, -51 + y_val, 250, 800, 255, SDL_FALSE);
-	}
-	if (*(*(cur_game->maps[cur_user->map].tiles + walls[1].row) + walls[1].col) == WALL) {
-		draw_rect(cur_game, 713 + x_val, -51 + y_val, 250, 800, SDL_TRUE, "black");
-		draw_sprites(cur_game, cur_game->sprites.walls, 1, 713 + x_val, -51 + y_val, 250, 800, 255, SDL_TRUE);
+	/* Draw all walls */
+	for (i = 0; i < 25; i++) {
+		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], 4);
 	}
 	/* Output white grid */
 	draw_rect(cur_game, 341, 10, 929, 700, SDL_FALSE, "white");
