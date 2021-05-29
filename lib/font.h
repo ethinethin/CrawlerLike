@@ -6,6 +6,7 @@
 extern void	load_font(struct game *cur_game);
 extern void	unload_font(struct game *cur_game);
 extern void	set_font_alpha(int alpha);
+extern void	draw_sentence_xlimited(struct game *cur_game, int x, int y, char *sentence, float scale, int max_x);
 extern void	draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale);
 
 #endif

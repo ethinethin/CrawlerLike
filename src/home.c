@@ -50,8 +50,16 @@ title(struct game *cur_game, struct user *cur_user)
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
 			if (whichscreen == TITLE) {
-				if (cur_game->state == UNLOADED || (cur_game->state == LOADED &&
-				    yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE)) {
+				if (cur_game->state == UNLOADED) {
+					loop = SDL_FALSE;
+				} else if (cur_game->save == -1 &&
+					   yes_no(cur_game, "Game in progress will be lost. Okay to quit?") == SDL_TRUE) {
+					cur_game->running = SDL_FALSE;
+					exit_game(cur_game, cur_user);
+					loop = SDL_FALSE;
+				} else if (cur_game->save != -1 &&
+					   yes_no(cur_game, "Game in progress will be saved. Okay to quit?") == SDL_TRUE) {
+					save_all(cur_game, cur_user, cur_game->save);
 					cur_game->running = SDL_FALSE;
 					exit_game(cur_game, cur_user);
 					loop = SDL_FALSE;
@@ -102,14 +110,28 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				*whichscreen = NEWGAME;
 			}
 		} else if (y >= 212 && y < 232 && cur_game->state == LOADED) {
-			*whichscreen = SAVE;
+			/* Only bring up save screen if the game hasn't been saved before,
+			 * otherwise, save in the existing save file */
+			if (cur_game->save == -1) {
+				*whichscreen = SAVE;
+			} else {
+				*whichscreen = GAMESCREEN;
+				save_all(cur_game, cur_user, cur_game->save);
+			}
 		} else if (y >= 237 && y < 257) {
 			*whichscreen = LOAD;
 		} else if (y >= 262 && y < 282) {
 			*whichscreen = OPTIONS;
 		} else if (y >= 287 && y < 307) {
-			if (cur_game->state == UNLOADED || (cur_game->state == LOADED &&
-			    yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE)) {
+			if (cur_game->state == UNLOADED) {
+				cur_game->running = SDL_FALSE;
+				*whichscreen = GAMESCREEN;
+			} else if (cur_game->save == -1 && yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE) {
+				cur_game->running = SDL_FALSE;
+				exit_game(cur_game, cur_user);
+				*whichscreen = GAMESCREEN;
+			} else if (cur_game->save != -1 && yes_no(cur_game, "Game in progress will be saved.\nOkay to quit?") == SDL_TRUE) {
+				save_all(cur_game, cur_user, cur_game->save);
 				cur_game->running = SDL_FALSE;
 				exit_game(cur_game, cur_user);
 				*whichscreen = GAMESCREEN;
@@ -121,6 +143,8 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 static void
 draw_saveload(struct game *cur_game, SDL_bool save)
 {
+	char sentence[10];
+	int i;
 	struct savefile_info info;
 	
 	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
@@ -130,43 +154,20 @@ draw_saveload(struct game *cur_game, SDL_bool save)
 	} else {
 		draw_sentence(cur_game, 20, 20, "Load Game", 0.5);
 	}
-	/* Save 1 */
-	draw_rect(cur_game, 100, 137, 880, 160, SDL_TRUE, "black");
-	draw_rect(cur_game, 100, 137, 880, 160, SDL_FALSE, "white");
-	draw_sentence(cur_game, 105, 142, "Save 1", 0.1);
-	get_savefile_info(&info, 1);
-	if (info.exists == SDL_TRUE) {
-		draw_sentence(cur_game, 125, 182, info.name, 0.1);
-		draw_sentence(cur_game, 125, 202, info.level, 0.1);
-		draw_sentence(cur_game, 125, 222, info.map, 0.1);
-	} else {
-		draw_sentence(cur_game, 125, 182, "No save data", 0.1);
-	}
-		
-	/* Save 2 */
-	draw_rect(cur_game, 200, 317, 880, 160, SDL_TRUE, "black");
-	draw_rect(cur_game, 200, 317, 880, 160, SDL_FALSE, "white");
-	draw_sentence(cur_game, 205, 322, "Save 2", 0.1);
-	get_savefile_info(&info, 2);
-	if (info.exists == SDL_TRUE) {
-		draw_sentence(cur_game, 225, 362, info.name, 0.1);
-		draw_sentence(cur_game, 225, 382, info.level, 0.1);
-		draw_sentence(cur_game, 225, 402, info.map, 0.1);
-	} else {
-		draw_sentence(cur_game, 225, 362, "No save data", 0.1);
-	}
-	
-	/* Save 3 */
-	draw_rect(cur_game, 300, 497, 880, 160, SDL_TRUE, "black");
-	draw_rect(cur_game, 300, 497, 880, 160, SDL_FALSE, "white");
-	draw_sentence(cur_game, 305, 502, "Save 3", 0.1);
-	get_savefile_info(&info, 3);
-	if (info.exists == SDL_TRUE) {
-		draw_sentence(cur_game, 325, 542, info.name, 0.1);
-		draw_sentence(cur_game, 325, 562, info.level, 0.1);
-		draw_sentence(cur_game, 325, 582, info.map, 0.1);
-	} else {
-		draw_sentence(cur_game, 325, 542, "No save data", 0.1);
+	/* Draw each savefile info */
+	for (i = 1; i < 4; i++) {
+		draw_rect(cur_game, i * 100, i * 137, 880, 127, SDL_TRUE, "black");
+		draw_rect(cur_game, i * 100, i * 137, 880, 127, SDL_FALSE, "white");
+		sprintf(sentence, "Save %d", i);
+		draw_sentence(cur_game, i * 100 + 5, i * 137 + 5, sentence, 0.1);
+		get_savefile_info(&info, i);
+		if (info.exists == SDL_TRUE) {
+			draw_sentence(cur_game, i * 100 + 25, i * 137 + 45, info.line1, 0.1);
+			draw_sentence(cur_game, i * 100 + 25, i * 137 + 65, info.line2, 0.1);
+			draw_sentence(cur_game, i * 100 + 25, i * 137 + 85, info.line3, 0.1);
+		} else {
+			draw_sentence(cur_game, i * 100 + 25, i * 137 + 45, "No save data", 0.1);
+		}
 	}
 }
 
@@ -356,6 +357,7 @@ yes_no(struct game *cur_game, char *message)
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_y:
+				case SDLK_RETURN:
 					answer = RESULTS_YES;
 					loop = SDL_FALSE;
 					break;
@@ -402,9 +404,12 @@ draw_yesno(struct game *cur_game, char *message)
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
 		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
 		  SDL_FALSE, "white");
-	draw_sentence(cur_game, 350 * cur_game->display.scale_w, 250 * cur_game->display.scale_h, message, 0.1 * cur_game->display.scale_w);
-	draw_sentence(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Yes", 0.1 * cur_game->display.scale_w);
-	draw_sentence(cur_game, 680 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "No", 0.1 * cur_game->display.scale_w);
+	draw_sentence_xlimited(cur_game, 350 * cur_game->display.scale_w, 250 * cur_game->display.scale_h, message,
+			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+	draw_sentence_xlimited(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Yes",
+			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+	draw_sentence_xlimited(cur_game, 680 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "No",
+			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
 	/* Present */
 	SDL_RenderPresent(cur_game->display.renderer);
 }
@@ -489,6 +494,7 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	update_seen(cur_user);
 	/* Game is now loaded and running */
 	cur_game->state = LOADED;
+	cur_game->save = -1;
 }
 
 static void
@@ -505,4 +511,5 @@ exit_game(struct game *cur_game, struct user *cur_user)
 	free(cur_game->maps);
 	free(cur_user->seen);
 	cur_game->state = UNLOADED;
+	cur_game->save = -1;
 }

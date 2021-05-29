@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <SDL2/SDL.h>
+#include <time.h>
 #include "home.h"
 #include "main.h"
 #include "maze.h"
@@ -90,7 +91,9 @@ get_savefile_info(struct savefile_info *save, int saveslot)
 		save->exists = SDL_FALSE;
 	} else {
 		save->exists = SDL_TRUE;
-		fscanf(fp, "%s\n%s\n%s\n", save->name, save->level, save->map);
+		fscanf(fp, "%[^\n]%*c", save->line1);
+		fscanf(fp, "%[^\n]%*c", save->line2);
+		fscanf(fp, "%[^\n]%*c", save->line3);
 		fclose(fp);
 	}	
 }
@@ -110,6 +113,7 @@ load_all(struct game *cur_game, struct user *cur_user, int saveslot)
 	load_map(cur_game, saveslot);
 	load_player(cur_user, saveslot);
 	cur_game->state = LOADED;
+	cur_game->save = saveslot;
 }
 
 static void
@@ -117,11 +121,14 @@ save_info(struct game *cur_game, struct user *cur_user, int saveslot)
 {
 	char filename[20];
 	FILE *fp;
+	time_t timestamp;
+ 
+	time(&timestamp);
 	
 	sprintf(filename, "save/save%d/info.txt", saveslot);
 	fp = fopen(filename, "w");
 	/* This stuff needs to come from the character */
-	fprintf(fp, "%s\n%s\n%s\n", "Bobby", "Lv.20", "Floor:37");
+	fprintf(fp, "%s\n%s\n%s\n", "Mr. Bobby (Lv. 20)", "Floor: 37", ctime(&timestamp));
 	fclose(fp);
 }
 

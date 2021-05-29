@@ -62,7 +62,7 @@ draw_char(struct game *cur_game, int x, int y, int letter, float scale)
 }
 
 void
-draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale)
+draw_sentence_xlimited(struct game *cur_game, int x, int y, char *sentence, float scale, int max_x)
 {
 	int i;
 	int start_x = x;
@@ -73,9 +73,15 @@ draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale)
 			draw_char(cur_game, x, y, sentence[i] - 32, scale);
 			x += 192 * scale;
 		}
-		if (x >= (1280 - 192 * scale) || sentence[i] == '\n') {
+		if (x >= (max_x - 192 * scale) || sentence[i] == '\n') {
 			x = start_x;
 			y = y + 208 * scale;
 		}
 	}
+}
+
+void
+draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale)
+{
+	draw_sentence_xlimited(cur_game, x, y, sentence, scale, 1280);
 }

@@ -7,9 +7,9 @@
 
 struct savefile_info {
 	SDL_bool exists;
-	char name[20];
-	char level[20];
-	char map[20];
+	char line1[80];
+	char line2[80];
+	char line3[80];
 };
 
 extern void	get_savefile_info(struct savefile_info *save, int saveslot);
