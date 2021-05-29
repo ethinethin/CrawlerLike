@@ -10,19 +10,21 @@
 
 /* Function prototypes */
 static void		draw_title(struct game *cur_game);
-static SDL_bool		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen);
-static void		saveload(struct game *cur_game, struct user *cur_user);
-static void		draw_saveload(struct game *cur_game);
+static void		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen);
+static void		draw_saveload(struct game *cur_game, SDL_bool save);
+static void		saveload_click(struct game *cur_game, struct user *cur_user, SDL_bool save, int x, int y, int *whichscreen);
 static void		draw_options(struct game *cur_game);
-static void		options_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen);
+static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
 static SDL_bool		yes_no(struct game *cur_game, char *message);
 static void		draw_yesno(struct game *cur_game, char *message);
-static SDL_bool		yesno_click(int x, int y);
+static int		yesno_click(int x, int y);
+static void		draw_new(struct game *cur_game);
+static void		new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y);
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
 static void		exit_game(struct game *cur_game, struct user *cur_user);
 
-enum titlescreen { TITLE, SAVELOAD, OPTIONS };
+enum titlescreen { TITLE, NEWGAME, SAVE, LOAD, OPTIONS, GAMESCREEN };
 
 void
 title(struct game *cur_game, struct user *cur_user)
@@ -34,20 +36,29 @@ title(struct game *cur_game, struct user *cur_user)
 	
 	whichscreen = TITLE;
 	loop = SDL_TRUE;
-	while (loop == SDL_TRUE) {
+	while (loop == SDL_TRUE && whichscreen != GAMESCREEN) {
 		/* draw appropriate screen and render */
 		render_clear(cur_game, "darkblue");
 		if (whichscreen == TITLE) draw_title(cur_game);
-		else if (whichscreen == SAVELOAD) draw_saveload(cur_game);
+		else if (whichscreen == SAVE) draw_saveload(cur_game, SDL_TRUE);
+		else if (whichscreen == LOAD) draw_saveload(cur_game, SDL_FALSE);
 		else if (whichscreen == OPTIONS) draw_options(cur_game);
+		else if (whichscreen == NEWGAME) draw_new(cur_game);
 		render_present(cur_game);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
-			cur_game->running = SDL_FALSE;
-			loop = SDL_FALSE;
-			exit_game(cur_game, cur_user);
+			if (whichscreen == TITLE) {
+				if (cur_game->state == UNLOADED || (cur_game->state == LOADED &&
+				    yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE)) {
+					cur_game->running = SDL_FALSE;
+					exit_game(cur_game, cur_user);
+					loop = SDL_FALSE;
+				}
+			} else {
+				whichscreen = TITLE;
+			}
 		} else if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_ESCAPE:
@@ -58,8 +69,11 @@ title(struct game *cur_game, struct user *cur_user)
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			x = event.button.x / cur_game->display.scale_w;
 			y = event.button.y / cur_game->display.scale_h;
-			if (whichscreen == TITLE) loop = title_click(cur_game, cur_user, x, y, &whichscreen);
-			else if (whichscreen == OPTIONS) options_click(cur_game, cur_user, x, y, &whichscreen);
+			if (whichscreen == TITLE) title_click(cur_game, cur_user, x, y, &whichscreen);
+			else if (whichscreen == OPTIONS) options_click(cur_game, x, y, &whichscreen);
+			else if (whichscreen == NEWGAME) new_click(cur_game, cur_user, &whichscreen, x, y);
+			else if (whichscreen == SAVE && cur_game->state == LOADED) saveload_click(cur_game, cur_user, SDL_TRUE, x, y, &whichscreen);
+			else if (whichscreen == LOAD) saveload_click(cur_game, cur_user, SDL_FALSE, x, y, &whichscreen);
 		}
 	}
 }
@@ -69,59 +83,139 @@ draw_title(struct game *cur_game)
 {
 	draw_sentence(cur_game, 20, 20, "CrawlerLike", 0.5);
 	draw_sentence(cur_game, 100, 187, "New Game", 0.1);
-	draw_sentence(cur_game, 100, 212, "Load Game", 0.1);
-	draw_sentence(cur_game, 100, 237, "Save Game", 0.1);
+	if (cur_game->state == LOADED) draw_sentence(cur_game, 100, 212, "Save Game", 0.1);
+	draw_sentence(cur_game, 100, 237, "Load Game", 0.1);
 	draw_sentence(cur_game, 100, 262, "Options", 0.1);
 	draw_sentence(cur_game, 100, 287, "Exit", 0.1);
 	if (cur_game->state == LOADED) draw_sentence(cur_game, 10, 679, "Back to Game", 0.15);
 }
 
-static SDL_bool
+static void
 title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen)
 {
 	if (x >= 10 && x <= 340 && y >= 679 && y < 709 && cur_game->state == LOADED) {
-		return SDL_FALSE;
+		*whichscreen = GAMESCREEN;
 	} else if (x >= 100 && x <= 280) {
 		if (y >= 187 && y < 207) {
 			if (cur_game->state == UNLOADED ||
 			    (cur_game->state == LOADED && yes_no(cur_game, "Game in progress will be lost.\nContinue?") == SDL_TRUE)) {
-			    	/* Unload the current game */
-				if (cur_game->state == LOADED) exit_game(cur_game, cur_user); 
-				/* Make a new game */
-				new_game(cur_game, cur_user, 20, 16, 16);
-				cur_game->state = LOADED;
-				return SDL_FALSE;
+				*whichscreen = NEWGAME;
 			}
-		} else if (y >= 212 && y < 232) {
-			printf("Load game clicked\n");
-			/* I don't have saving and loading implemented yet */
+		} else if (y >= 212 && y < 232 && cur_game->state == LOADED) {
+			*whichscreen = SAVE;
 		} else if (y >= 237 && y < 257) {
-			printf("Save game clicked\n");
-			/* I don't have saving and loading implemented yet */
+			*whichscreen = LOAD;
 		} else if (y >= 262 && y < 282) {
 			*whichscreen = OPTIONS;
-		} else if (y >= 287 && y < 397) {
-			/* exit */
-			cur_game->running = SDL_FALSE;
-			exit_game(cur_game, cur_user);
-			return SDL_FALSE;
+		} else if (y >= 287 && y < 307) {
+			if (cur_game->state == UNLOADED || (cur_game->state == LOADED &&
+			    yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE)) {
+				cur_game->running = SDL_FALSE;
+				exit_game(cur_game, cur_user);
+				*whichscreen = GAMESCREEN;
+			}
 		}
 	}
-	return SDL_TRUE;
 }
 
 static void
-saveload(struct game *cur_game, struct user *cur_user)
+draw_saveload(struct game *cur_game, SDL_bool save)
 {
-	if (cur_game->running == SDL_TRUE || cur_user->map >= 0) return;
-	/* I don't have saving and loading implemented yet */
+	struct savefile_info info;
+	
+	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
+	/* Saving or loading? */
+	if (save == SDL_TRUE) {
+		draw_sentence(cur_game, 20, 20, "Save Game", 0.5);
+	} else {
+		draw_sentence(cur_game, 20, 20, "Load Game", 0.5);
+	}
+	/* Save 1 */
+	draw_rect(cur_game, 100, 137, 880, 160, SDL_TRUE, "black");
+	draw_rect(cur_game, 100, 137, 880, 160, SDL_FALSE, "white");
+	draw_sentence(cur_game, 105, 142, "Save 1", 0.1);
+	get_savefile_info(&info, 1);
+	if (info.exists == SDL_TRUE) {
+		draw_sentence(cur_game, 125, 182, info.name, 0.1);
+		draw_sentence(cur_game, 125, 202, info.level, 0.1);
+		draw_sentence(cur_game, 125, 222, info.map, 0.1);
+	} else {
+		draw_sentence(cur_game, 125, 182, "No save data", 0.1);
+	}
+		
+	/* Save 2 */
+	draw_rect(cur_game, 200, 317, 880, 160, SDL_TRUE, "black");
+	draw_rect(cur_game, 200, 317, 880, 160, SDL_FALSE, "white");
+	draw_sentence(cur_game, 205, 322, "Save 2", 0.1);
+	get_savefile_info(&info, 2);
+	if (info.exists == SDL_TRUE) {
+		draw_sentence(cur_game, 225, 362, info.name, 0.1);
+		draw_sentence(cur_game, 225, 382, info.level, 0.1);
+		draw_sentence(cur_game, 225, 402, info.map, 0.1);
+	} else {
+		draw_sentence(cur_game, 225, 362, "No save data", 0.1);
+	}
+	
+	/* Save 3 */
+	draw_rect(cur_game, 300, 497, 880, 160, SDL_TRUE, "black");
+	draw_rect(cur_game, 300, 497, 880, 160, SDL_FALSE, "white");
+	draw_sentence(cur_game, 305, 502, "Save 3", 0.1);
+	get_savefile_info(&info, 3);
+	if (info.exists == SDL_TRUE) {
+		draw_sentence(cur_game, 325, 542, info.name, 0.1);
+		draw_sentence(cur_game, 325, 562, info.level, 0.1);
+		draw_sentence(cur_game, 325, 582, info.map, 0.1);
+	} else {
+		draw_sentence(cur_game, 325, 542, "No save data", 0.1);
+	}
 }
 
 static void
-draw_saveload(struct game *cur_game)
+saveload_click(struct game *cur_game, struct user *cur_user, SDL_bool save, int x, int y, int *whichscreen)
 {
-	if (cur_game->running == SDL_TRUE) return;
-	/* I don't have saving and loading implemented yet */
+	char message[25];
+	int saveslot;
+	struct savefile_info info;
+	
+	/* Which slot is being clicked? */
+	if (x >= 100 && x <= 980 && y >= 137 && y <= 297) {
+		saveslot = 1;
+	} else if (x >= 200 && x <= 1080 && y >= 317 && y <= 477) {
+		saveslot = 2;
+	} else if (x >= 300 && x <= 1180 && y >= 497 && y <= 657) {
+		saveslot = 3;
+	} else if (x >= 10 && x < 570 && y >= 681 && y < 710) {
+		*whichscreen = TITLE;
+		return;
+	} else {
+		return;
+	}
+	
+	/* Get info for savefile clicked */
+	get_savefile_info(&info, saveslot);
+	
+	/* Loading or saving? */
+	if (save == SDL_TRUE) {
+		sprintf(message, "Overwrite save file %d?", saveslot);
+		/* Save if the file doesn't exist or the user says it's okay to overwrite */
+		if (info.exists == SDL_FALSE ||
+		    yes_no(cur_game, message) == SDL_TRUE) {
+			save_all(cur_game, cur_user, saveslot);
+			*whichscreen = GAMESCREEN;
+		}
+	} else if (info.exists == SDL_TRUE) {
+		/* If a game is in progress, make sure it's okay to lose and unload it */
+		if (cur_game->state == LOADED) {
+			if (yes_no(cur_game, "Game in progress will be lost.\nContinue?") == SDL_TRUE) {
+		    		exit_game(cur_game, cur_user);
+		    	} else {
+		    		return;
+		    	}
+		}
+		/* Load if there's no game in progress or the user says it's okay to abandon game in progress */
+		load_all(cur_game, cur_user, saveslot);
+		*whichscreen = GAMESCREEN;
+	}
 }
 
 static void
@@ -168,11 +262,11 @@ draw_options(struct game *cur_game)
 }
 
 static void
-options_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen)
+options_click(struct game *cur_game, int x, int y, int *whichscreen)
 {
 	SDL_bool changed = SDL_FALSE;
 	
-	if (x >= 10 && x < 540 && y >= 681 && y < 710) {
+	if (x >= 10 && x < 570 && y >= 681 && y < 710) {
 		*whichscreen = TITLE;
 	} else if (x >= 135 && x < 328) {
 		if (y >= 228 && y < 248 && cur_game->display.mode == WINDOW) {
@@ -250,7 +344,7 @@ yes_no(struct game *cur_game, char *message)
 {
 	SDL_Event event;
 	SDL_bool loop;
-	SDL_bool answer;
+	int answer;
 	
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE) {
@@ -262,21 +356,29 @@ yes_no(struct game *cur_game, char *message)
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_y:
-					answer = SDL_TRUE;
+					answer = RESULTS_YES;
+					loop = SDL_FALSE;
+					break;
+				case SDLK_n:
+				case SDLK_ESCAPE:
+					answer = RESULTS_NO;
 					loop = SDL_FALSE;
 					break;
 				default:
-					answer = SDL_FALSE;
-					loop = SDL_FALSE;
 					break;
 			}
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			answer = yesno_click(event.button.x / cur_game->display.scale_w,
 					     event.button.y / cur_game->display.scale_h);
+			if (answer == RESULTS_NULL) continue;
 			loop = SDL_FALSE;
 		}
 	}
-	return answer;
+	if (answer == RESULTS_YES) {
+		return SDL_TRUE;
+	} else {
+		return SDL_FALSE;
+	}
 }
 
 static void
@@ -294,28 +396,65 @@ draw_yesno(struct game *cur_game, char *message)
 	/* Render a yesno box - scaled */
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
-		  600 * cur_game->display.scale_w, 200 * cur_game->display.scale_w,
+		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
 		  SDL_TRUE, "black");
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
-		  600 * cur_game->display.scale_w, 200 * cur_game->display.scale_w,
+		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
 		  SDL_FALSE, "white");
 	draw_sentence(cur_game, 350 * cur_game->display.scale_w, 250 * cur_game->display.scale_h, message, 0.1 * cur_game->display.scale_w);
-	draw_sentence(cur_game, 480 * cur_game->display.scale_w, 330 * cur_game->display.scale_h, "Yes", 0.1 * cur_game->display.scale_w);
-	draw_sentence(cur_game, 680 * cur_game->display.scale_w, 330 * cur_game->display.scale_h, "No", 0.1 * cur_game->display.scale_w);
+	draw_sentence(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Yes", 0.1 * cur_game->display.scale_w);
+	draw_sentence(cur_game, 680 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "No", 0.1 * cur_game->display.scale_w);
 	/* Present */
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
-static SDL_bool
+static int
 yesno_click(int x, int y)
 {
-	if (y >= 250 && y < 270) {
+	if (y >= 380 && y < 400) {
 		if (x >= 480 & x < 534) {
-			return SDL_TRUE;
-		} else if (x >= 680 & x < 716) {
-			return SDL_FALSE;
+			return RESULTS_YES;
+		} else if (x >= 680 & x < 725) {
+			return RESULTS_NO;
 		}
+	}
+	return RESULTS_NULL;
+}
+
+static void
+draw_new(struct game *cur_game)
+{
+	draw_sentence(cur_game, 20, 20, "New Game", 0.5);
+	draw_sentence(cur_game, 100, 187, "Easy", 0.1);
+	draw_sentence(cur_game, 100, 212, "Normal", 0.1);
+	draw_sentence(cur_game, 100, 237, "Hard", 0.1);
+	draw_sentence(cur_game, 100, 262, "Endless", 0.1);
+	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
+}
+
+static void
+new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y)
+{
+	int levels;
+	
+	levels = 0;
+	if (x >= 102 && x < 177 && y >= 187 && y < 207) {
+		levels = 25;
+	} else if (x >= 102 && x < 213 && y >= 212 && y < 232) {
+		levels = 50;
+	} else if (x >= 102 && x < 175 && y >= 237 && y < 257) {
+		levels = 100;
+	} else if (x >= 102 && x < 230 && y >= 262 && y < 282) {
+		levels = 101;
+	} else if (x >= 13 && x < 567 && y >= 678 && y < 705) {
+		*whichscreen = TITLE;
+	}
+	/* See if they picked a difficulty */
+	if (levels != 0) {
+		if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
+		new_game(cur_game, cur_user, levels, 16, 16);
+		*whichscreen = GAMESCREEN;
 	}
 }
 
@@ -348,18 +487,22 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	}
 	/* Update starting square as seen */
 	update_seen(cur_user);
-	/* Game is now running */
-	cur_game->running = SDL_TRUE;
+	/* Game is now loaded and running */
+	cur_game->state = LOADED;
 }
 
 static void
 exit_game(struct game *cur_game, struct user *cur_user)
 {
 	int i;
+	/* This might get called before a game is loaded, so just ignore it */
+	if (cur_game->state == UNLOADED) return;
+	
 	for (i = 0; i < cur_game->num_maps; i++) {
 		kill_map(&cur_game->maps[i]);
 		kill_seen(&cur_user->seen[i]);
 	}
 	free(cur_game->maps);
 	free(cur_user->seen);
+	cur_game->state = UNLOADED;
 }

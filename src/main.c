@@ -25,6 +25,7 @@ struct game GAME = {
 	  NULL,		/* sprites.arrows */
 	  NULL },	/* sprites.font */
 	UNLOADED,	/* state */
+	-1,		/* save */
 	SDL_FALSE,	/* running */
 	0,		/* num_maps */
 	NULL		/* maps */
@@ -48,6 +49,7 @@ main()
 	load_opts(cur_game);
 	display_init(cur_game);
 	seed_rng();
+	cur_game->running = SDL_TRUE;
 	title(cur_game, cur_user);
 
 	/* Enter main game loop */
