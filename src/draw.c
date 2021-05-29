@@ -17,13 +17,13 @@ display_init(struct game *cur_game)
 	SDL_DisplayMode dm;
 
 	/* Create the main window */
-	if (cur_game->display.mode == 0) {
+	if (cur_game->display.mode == FULLSCREEN_DESKTOP) {
 		printf("%d\n", SDL_GetDesktopDisplayMode(0, &dm));
 		cur_game->display.w = dm.w;
 		cur_game->display.h = dm.h;
 		printf("%d %d\n", dm.w, dm.h);
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	} else if (cur_game->display.mode == 1) {
+	} else if (cur_game->display.mode == FULLSCREEN) {
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN);
 	} else {
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_SHOWN);

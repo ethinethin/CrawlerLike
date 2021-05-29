@@ -148,34 +148,35 @@ check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25
 struct wall_dim {
 	int wall_num;
 	int sprite;
-	SDL_Rect dim;
 	SDL_bool flip;
+	int overlay;
+	SDL_Rect dim;
 } wall_dim[25] = {
-	{ 0, 1, { -37, -51, 250, 800 }, SDL_FALSE },
-	{ 1, 1, { 713, -51, 250, 800 }, SDL_TRUE }, 
-	{ 2, 0, { -287, 149, 500, 400 }, SDL_FALSE }, 
-	{ 3, 0, { 213, 149, 500, 400 }, SDL_FALSE }, 
-	{ 4, 0, { 713, 149, 500, 400 }, SDL_FALSE }, 
-	{ 5, 1, { -288, 149, 376, 400 }, SDL_FALSE }, 
-	{ 6, 1, { 213, 149, 125, 400 }, SDL_FALSE }, 
-	{ 7, 1, { 588, 149, 125, 400 }, SDL_TRUE }, 
-	{ 8, 1, { 838, 149, 376, 400 }, SDL_TRUE }, 
-	{ 9, 0, { -162, 249, 250, 200 }, SDL_FALSE }, 
-	{ 10, 0, { 88, 249, 250, 200 }, SDL_FALSE }, 
-	{ 11, 0, { 338, 249, 250, 200 }, SDL_FALSE }, 
-	{ 12, 0, { 588, 249, 250, 200 }, SDL_FALSE }, 
-	{ 13, 0, { 838, 249, 250, 200 }, SDL_FALSE }, 
-	{ 14, 1, { -159, 249, 310, 200 }, SDL_FALSE }, 
-	{ 15, 1, { 88, 249, 188, 200 }, SDL_FALSE }, 
-	{ 16, 1, { 338, 249, 63, 200 }, SDL_FALSE }, 
-	{ 17, 1, { 526, 249, 62, 200 }, SDL_TRUE }, 
-	{ 18, 1, { 651, 249, 188, 200 }, SDL_TRUE }, 
-	{ 19, 1, { 776, 249, 310, 200 }, SDL_TRUE }, 
-	{ 20, 0, { 151, 299, 125, 100 }, SDL_FALSE }, 
-	{ 21, 0, { 276, 299, 125, 100 }, SDL_FALSE }, 
-	{ 22, 0, { 401, 299, 125, 100 }, SDL_FALSE }, 
-	{ 23, 0, { 526, 299, 125, 100 }, SDL_FALSE }, 
-	{ 24, 0, { 651, 299, 125, 100 }, SDL_FALSE }
+	{ 0, 1, SDL_FALSE, 0, { -37, -51, 250, 800 } },
+	{ 1, 1, SDL_TRUE, 0, { 713, -51, 250, 800 } }, 
+	{ 2, 0, SDL_FALSE, 32, { -287, 149, 500, 400 } }, 
+	{ 3, 0, SDL_FALSE, 0, { 213, 149, 500, 400 } }, 
+	{ 4, 0, SDL_FALSE, 32, { 713, 149, 500, 400 } }, 
+	{ 5, 1, SDL_FALSE, 96, { -288, 149, 376, 400 } }, 
+	{ 6, 1, SDL_FALSE, 64, { 213, 149, 125, 400 } }, 
+	{ 7, 1, SDL_TRUE, 64, { 588, 149, 125, 400 } }, 
+	{ 8, 1, SDL_TRUE, 96, { 838, 149, 376, 400 } }, 
+	{ 9, 0, SDL_FALSE, 160, { -162, 249, 250, 200 } }, 
+	{ 10, 0, SDL_FALSE, 128, { 88, 249, 250, 200 } }, 
+	{ 11, 0, SDL_FALSE, 96, { 338, 249, 250, 200 } }, 
+	{ 12, 0, SDL_FALSE, 128, { 588, 249, 250, 200 } }, 
+	{ 13, 0, SDL_FALSE, 160, { 838, 249, 250, 200 } }, 
+	{ 14, 1, SDL_FALSE, 192, { -159, 249, 310, 200 } }, 
+	{ 15, 1, SDL_FALSE, 160, { 88, 249, 188, 200 } }, 
+	{ 16, 1, SDL_FALSE, 128, { 338, 249, 63, 200 } }, 
+	{ 17, 1, SDL_TRUE, 128, { 526, 249, 62, 200 } }, 
+	{ 18, 1, SDL_TRUE, 160, { 651, 249, 188, 200 } }, 
+	{ 19, 1, SDL_TRUE, 192, { 776, 249, 310, 200 } }, 
+	{ 20, 0, SDL_FALSE, 192, { 151, 299, 125, 100 } }, 
+	{ 21, 0, SDL_FALSE, 160, { 276, 299, 125, 100 } }, 
+	{ 22, 0, SDL_FALSE, 128, { 401, 299, 125, 100 } }, 
+	{ 23, 0, SDL_FALSE, 160, { 526, 299, 125, 100 } }, 
+	{ 24, 0, SDL_FALSE, 192, { 651, 299, 125, 100 } }
 };
 
 static void
@@ -183,7 +184,6 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 {
 	int x_val = 342;
 	int y_val = 11;
-	
 	/* Check if you need to render the wall */
 	switch(*(*(cur_game->maps[cur_user->map].tiles + wall_coords[wall_num].row) + wall_coords[wall_num].col)) {
 		case WALL:
@@ -195,6 +195,14 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.h,
 				     255,
 				     wall_dim[wall_num].flip);
+			draw_sprites(cur_game, walls,
+				     wall_dim[wall_num].sprite,
+				     wall_dim[wall_num].dim.x + x_val,
+				     wall_dim[wall_num].dim.y + y_val,
+				     wall_dim[wall_num].dim.w,
+				     wall_dim[wall_num].dim.h,
+				     wall_dim[wall_num].overlay,
+				     wall_dim[wall_num].flip);
 			break;
 		case DOOR:
 			draw_sprites(cur_game, walls,
@@ -204,6 +212,14 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.w,
 				     wall_dim[wall_num].dim.h,
 				     255,
+				     wall_dim[wall_num].flip);
+			draw_sprites(cur_game, walls,
+				     wall_dim[wall_num].sprite + 2,
+				     wall_dim[wall_num].dim.x + x_val,
+				     wall_dim[wall_num].dim.y + y_val,
+				     wall_dim[wall_num].dim.w,
+				     wall_dim[wall_num].dim.h,
+				     wall_dim[wall_num].overlay,
 				     wall_dim[wall_num].flip);
 			break;
 	}

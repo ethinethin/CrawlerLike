@@ -22,10 +22,13 @@ struct game {
 		SDL_Texture **arrows;
 		SDL_Texture **font;
 	} sprites;
+	int state;
 	SDL_bool running;
 	int num_maps;
 	struct map *maps;
 };
+
+enum display_mode { FULLSCREEN_DESKTOP, FULLSCREEN, WINDOW };
 
 struct coords {
 	int row;

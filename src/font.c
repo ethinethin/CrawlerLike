@@ -73,7 +73,7 @@ draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale)
 			draw_char(cur_game, x, y, sentence[i] - 32, scale);
 			x += 192 * scale;
 		}
-		if (x >= (cur_game->display.w - 192 * scale) || sentence[i] == '\n') {
+		if (x >= (1280 - 192 * scale) || sentence[i] == '\n') {
 			x = start_x;
 			y = y + 208 * scale;
 		}
