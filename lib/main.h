@@ -23,7 +23,6 @@ struct game {
 		SDL_Texture **font;
 	} sprites;
 	int state;
-	int save;
 	SDL_bool running;
 	int num_maps;
 	struct map *maps;

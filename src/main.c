@@ -25,7 +25,6 @@ struct game GAME = {
 	  NULL,		/* sprites.arrows */
 	  NULL },	/* sprites.font */
 	UNLOADED,	/* state */
-	-1,		/* save */
 	SDL_FALSE,	/* running */
 	0,		/* num_maps */
 	NULL		/* maps */

@@ -9,10 +9,8 @@
 #include "user.h"
 
 /* Function prototypes */
-static void		draw_title(struct game *cur_game);
-static void		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen);
-static void		draw_saveload(struct game *cur_game, SDL_bool save);
-static void		saveload_click(struct game *cur_game, struct user *cur_user, SDL_bool save, int x, int y, int *whichscreen);
+static void		draw_title(struct game *cur_game, SDL_bool save_exists);
+static void		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen, SDL_bool save_exists);
 static void		draw_options(struct game *cur_game);
 static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
@@ -24,7 +22,7 @@ static void		new_click(struct game *cur_game, struct user *cur_user, int *whichs
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
 static void		exit_game(struct game *cur_game, struct user *cur_user);
 
-enum titlescreen { TITLE, NEWGAME, SAVE, LOAD, OPTIONS, GAMESCREEN };
+enum titlescreen { TITLE, NEWGAME, OPTIONS, GAMESCREEN };
 
 void
 title(struct game *cur_game, struct user *cur_user)
@@ -33,15 +31,18 @@ title(struct game *cur_game, struct user *cur_user)
 	int whichscreen;
 	SDL_Event event;
 	SDL_bool loop;
+	struct savefile_info info;
 	
+	
+	/* See if there is a game to load */
+	get_savefile_info(&info);
+
 	whichscreen = TITLE;
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE && whichscreen != GAMESCREEN) {
 		/* draw appropriate screen and render */
 		render_clear(cur_game, "darkblue");
-		if (whichscreen == TITLE) draw_title(cur_game);
-		else if (whichscreen == SAVE) draw_saveload(cur_game, SDL_TRUE);
-		else if (whichscreen == LOAD) draw_saveload(cur_game, SDL_FALSE);
+		if (whichscreen == TITLE) draw_title(cur_game, info.exists);
 		else if (whichscreen == OPTIONS) draw_options(cur_game);
 		else if (whichscreen == NEWGAME) draw_new(cur_game);
 		render_present(cur_game);
@@ -52,16 +53,11 @@ title(struct game *cur_game, struct user *cur_user)
 			if (whichscreen == TITLE) {
 				if (cur_game->state == UNLOADED) {
 					loop = SDL_FALSE;
-				} else if (cur_game->save == -1 &&
-					   yes_no(cur_game, "Game in progress will be lost. Okay to quit?") == SDL_TRUE) {
 					cur_game->running = SDL_FALSE;
+				} else if (yes_no(cur_game, "Save and quit game in progress?") == SDL_TRUE) {
+					save_all(cur_game, cur_user);
 					exit_game(cur_game, cur_user);
-					loop = SDL_FALSE;
-				} else if (cur_game->save != -1 &&
-					   yes_no(cur_game, "Game in progress will be saved. Okay to quit?") == SDL_TRUE) {
-					save_all(cur_game, cur_user, cur_game->save);
 					cur_game->running = SDL_FALSE;
-					exit_game(cur_game, cur_user);
 					loop = SDL_FALSE;
 				}
 			} else {
@@ -77,145 +73,68 @@ title(struct game *cur_game, struct user *cur_user)
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			x = event.button.x / cur_game->display.scale_w;
 			y = event.button.y / cur_game->display.scale_h;
-			if (whichscreen == TITLE) title_click(cur_game, cur_user, x, y, &whichscreen);
+			if (whichscreen == TITLE) title_click(cur_game, cur_user, x, y, &whichscreen, info.exists);
 			else if (whichscreen == OPTIONS) options_click(cur_game, x, y, &whichscreen);
 			else if (whichscreen == NEWGAME) new_click(cur_game, cur_user, &whichscreen, x, y);
-			else if (whichscreen == SAVE && cur_game->state == LOADED) saveload_click(cur_game, cur_user, SDL_TRUE, x, y, &whichscreen);
-			else if (whichscreen == LOAD) saveload_click(cur_game, cur_user, SDL_FALSE, x, y, &whichscreen);
 		}
 	}
 }
 
 static void
-draw_title(struct game *cur_game)
+draw_title(struct game *cur_game, SDL_bool save_exists)
 {
 	draw_sentence(cur_game, 20, 20, "CrawlerLike", 0.5);
 	draw_sentence(cur_game, 100, 187, "New Game", 0.1);
-	if (cur_game->state == LOADED) draw_sentence(cur_game, 100, 212, "Save Game", 0.1);
-	draw_sentence(cur_game, 100, 237, "Load Game", 0.1);
+	if (save_exists == SDL_TRUE && cur_game->state == UNLOADED) draw_sentence(cur_game, 100, 212, "Continue Game", 0.1);
 	draw_sentence(cur_game, 100, 262, "Options", 0.1);
-	draw_sentence(cur_game, 100, 287, "Exit", 0.1);
-	if (cur_game->state == LOADED) draw_sentence(cur_game, 10, 679, "Back to Game", 0.15);
+	if (cur_game->state == LOADED) {
+		draw_sentence(cur_game, 100, 287, "Save and Exit", 0.1);
+		draw_sentence(cur_game, 10, 679, "Back to Game", 0.15);
+	} else {
+		draw_sentence(cur_game, 100, 287, "Exit", 0.1);
+	}
 }
 
 static void
-title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen)
+title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen, SDL_bool save_exists)
 {
 	if (x >= 10 && x <= 340 && y >= 679 && y < 709 && cur_game->state == LOADED) {
 		*whichscreen = GAMESCREEN;
-	} else if (x >= 100 && x <= 280) {
-		if (y >= 187 && y < 207) {
-			if (cur_game->state == UNLOADED ||
-			    (cur_game->state == LOADED && yes_no(cur_game, "Game in progress will be lost.\nContinue?") == SDL_TRUE)) {
+	} else if (x >= 100 && x <= 250 && y >= 187 && y < 207) {
+		/* New Game */
+		if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
+			*whichscreen = NEWGAME;
+		} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
+			if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?") == SDL_TRUE) {
 				*whichscreen = NEWGAME;
+				return;
 			}
-		} else if (y >= 212 && y < 232 && cur_game->state == LOADED) {
-			/* Only bring up save screen if the game hasn't been saved before,
-			 * otherwise, save in the existing save file */
-			if (cur_game->save == -1) {
-				*whichscreen = SAVE;
-			} else {
-				*whichscreen = GAMESCREEN;
-				save_all(cur_game, cur_user, cur_game->save);
-			}
-		} else if (y >= 237 && y < 257) {
-			*whichscreen = LOAD;
-		} else if (y >= 262 && y < 282) {
-			*whichscreen = OPTIONS;
-		} else if (y >= 287 && y < 307) {
-			if (cur_game->state == UNLOADED) {
-				cur_game->running = SDL_FALSE;
-				*whichscreen = GAMESCREEN;
-			} else if (cur_game->save == -1 && yes_no(cur_game, "Game in progress will be lost.\nOkay to quit?") == SDL_TRUE) {
-				cur_game->running = SDL_FALSE;
-				exit_game(cur_game, cur_user);
-				*whichscreen = GAMESCREEN;
-			} else if (cur_game->save != -1 && yes_no(cur_game, "Game in progress will be saved.\nOkay to quit?") == SDL_TRUE) {
-				save_all(cur_game, cur_user, cur_game->save);
-				cur_game->running = SDL_FALSE;
-				exit_game(cur_game, cur_user);
-				*whichscreen = GAMESCREEN;
+		} else if (cur_game->state == LOADED) {
+			if (yes_no(cur_game, "Game in progress will be\nerased.\n\nIs this okay?") == SDL_TRUE) {
+				*whichscreen = NEWGAME;
+				return;
 			}
 		}
-	}
-}
-
-static void
-draw_saveload(struct game *cur_game, SDL_bool save)
-{
-	char sentence[10];
-	int i;
-	struct savefile_info info;
-	
-	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
-	/* Saving or loading? */
-	if (save == SDL_TRUE) {
-		draw_sentence(cur_game, 20, 20, "Save Game", 0.5);
-	} else {
-		draw_sentence(cur_game, 20, 20, "Load Game", 0.5);
-	}
-	/* Draw each savefile info */
-	for (i = 1; i < 4; i++) {
-		draw_rect(cur_game, i * 100, i * 137, 880, 127, SDL_TRUE, "black");
-		draw_rect(cur_game, i * 100, i * 137, 880, 127, SDL_FALSE, "white");
-		sprintf(sentence, "Save %d", i);
-		draw_sentence(cur_game, i * 100 + 5, i * 137 + 5, sentence, 0.1);
-		get_savefile_info(&info, i);
-		if (info.exists == SDL_TRUE) {
-			draw_sentence(cur_game, i * 100 + 25, i * 137 + 45, info.line1, 0.1);
-			draw_sentence(cur_game, i * 100 + 25, i * 137 + 65, info.line2, 0.1);
-			draw_sentence(cur_game, i * 100 + 25, i * 137 + 85, info.line3, 0.1);
-		} else {
-			draw_sentence(cur_game, i * 100 + 25, i * 137 + 45, "No save data", 0.1);
-		}
-	}
-}
-
-static void
-saveload_click(struct game *cur_game, struct user *cur_user, SDL_bool save, int x, int y, int *whichscreen)
-{
-	char message[25];
-	int saveslot;
-	struct savefile_info info;
-	
-	/* Which slot is being clicked? */
-	if (x >= 100 && x <= 980 && y >= 137 && y <= 297) {
-		saveslot = 1;
-	} else if (x >= 200 && x <= 1080 && y >= 317 && y <= 477) {
-		saveslot = 2;
-	} else if (x >= 300 && x <= 1180 && y >= 497 && y <= 657) {
-		saveslot = 3;
-	} else if (x >= 10 && x < 570 && y >= 681 && y < 710) {
-		*whichscreen = TITLE;
-		return;
-	} else {
-		return;
-	}
-	
-	/* Get info for savefile clicked */
-	get_savefile_info(&info, saveslot);
-	
-	/* Loading or saving? */
-	if (save == SDL_TRUE) {
-		sprintf(message, "Overwrite save file %d?", saveslot);
-		/* Save if the file doesn't exist or the user says it's okay to overwrite */
-		if (info.exists == SDL_FALSE ||
-		    yes_no(cur_game, message) == SDL_TRUE) {
-			save_all(cur_game, cur_user, saveslot);
-			*whichscreen = GAMESCREEN;
-		}
-	} else if (info.exists == SDL_TRUE) {
-		/* If a game is in progress, make sure it's okay to lose and unload it */
-		if (cur_game->state == LOADED) {
-			if (yes_no(cur_game, "Game in progress will be lost.\nContinue?") == SDL_TRUE) {
-		    		exit_game(cur_game, cur_user);
-		    	} else {
-		    		return;
-		    	}
-		}
-		/* Load if there's no game in progress or the user says it's okay to abandon game in progress */
-		load_all(cur_game, cur_user, saveslot);
+	} else if (x >= 100 && x <= 344 && y >= 212 && y < 232 && cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
+		/* Clicking Continue Game */
 		*whichscreen = GAMESCREEN;
+		load_all(cur_game, cur_user);
+	} else if (x >= 100 && x <= 233 && y >= 262 && y < 282) {
+		/* Clicking Options */
+		*whichscreen = OPTIONS;
+	} else if (x >= 100 && x <= 344 && y >= 287 && y < 307) {
+		/* Clicking Exit or Save and Exit */
+		if (cur_game->state == UNLOADED) {
+			cur_game->running = SDL_FALSE;
+			*whichscreen = GAMESCREEN;
+		} else if (cur_game->state == LOADED) {
+			if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?") == SDL_TRUE) {
+				save_all(cur_game, cur_user);
+				cur_game->running = SDL_FALSE;
+				exit_game(cur_game, cur_user);
+				*whichscreen = GAMESCREEN;
+			}
+		}
 	}
 }
 
@@ -451,7 +370,7 @@ new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x,
 	} else if (x >= 102 && x < 175 && y >= 237 && y < 257) {
 		levels = 100;
 	} else if (x >= 102 && x < 230 && y >= 262 && y < 282) {
-		levels = 101;
+		levels = 200;
 	} else if (x >= 13 && x < 567 && y >= 678 && y < 705) {
 		*whichscreen = TITLE;
 	}
@@ -494,7 +413,6 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	update_seen(cur_user);
 	/* Game is now loaded and running */
 	cur_game->state = LOADED;
-	cur_game->save = -1;
 }
 
 static void
@@ -511,5 +429,4 @@ exit_game(struct game *cur_game, struct user *cur_user)
 	free(cur_game->maps);
 	free(cur_user->seen);
 	cur_game->state = UNLOADED;
-	cur_game->save = -1;
 }

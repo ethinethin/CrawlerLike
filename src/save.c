@@ -11,16 +11,36 @@
 #include "user.h"
 
 /* Function prototypes */
-static void	save_info(struct game *cur_game, struct user *cur_user, int saveslot);
-static void	save_map(struct game *cur_game, int saveslot);
-static void	load_map(struct game *cur_game, int saveslot);
-static void	save_player(struct user *cur_user, int saveslot);
-static void	load_player(struct user *cur_user, int saveslot);
+static void	save_info(struct game *cur_game, struct user *cur_user);
+static void	save_map(struct game *cur_game);
+static void	load_map(struct game *cur_game);
+static void	save_player(struct user *cur_user);
+static void	load_player(struct user *cur_user);
+
+SDL_bool checked_directories = SDL_FALSE;
+static void
+check_directories(void)
+{
+	DIR *dp;
+
+	/* Check if save directories exist */
+	dp = opendir("save");
+	if (dp != NULL) {
+		closedir(dp);
+	} else {
+		mkdir("save", 0744);
+	}
+	/* Only need to check once */
+	checked_directories = SDL_TRUE;
+}
 
 void
 save_opts(struct game *cur_game)
 {
 	FILE *fp;
+	
+	/* First time this is accessed, make sure the directories exist */
+	if (checked_directories == SDL_FALSE) check_directories();
 	
 	fp = fopen("options.ini", "w");
 	if (fp == NULL) {
@@ -40,6 +60,9 @@ load_opts(struct game *cur_game)
 {
 	FILE *fp;
 	
+	/* First time this is accessed, make sure the directories exist */
+	if (checked_directories == SDL_FALSE) check_directories();
+	
 	fp = fopen("options.ini", "r");
 	if (fp == NULL) {
 		/* File does not exist, keep the default values */
@@ -55,37 +78,15 @@ load_opts(struct game *cur_game)
 	fclose(fp);
 }
 
-SDL_bool checked_directories = SDL_FALSE;
-static void
-check_directories(void)
-{
-	char *dirs[] = { "save", "save/save1", "save/save2", "save/save3" };
-	int i;
-	DIR *dp;
-
-	/* Check if save directories exist */
-	for (i = 0; i < 4; i++) {
-		dp = opendir(dirs[i]);
-		if (dp != NULL) {
-			closedir(dp);
-		} else {
-			mkdir(dirs[i], 0744);
-		}
-	}
-	/* Only need to check once */
-	checked_directories = SDL_TRUE;
-}
-
 void
-get_savefile_info(struct savefile_info *save, int saveslot)
+get_savefile_info(struct savefile_info *save)
 {
-	char filename[20];
+	char filename[20] = "save/info.txt";
 	FILE *fp;
 
 	/* First time this is accessed, make sure the directories exist */
 	if (checked_directories == SDL_FALSE) check_directories();
 	/* Open savefile info file and pull out information */
-	sprintf(filename, "save/save%d/info.txt", saveslot);
 	fp = fopen(filename, "r");
 	if (fp == NULL) {
 		save->exists = SDL_FALSE;
@@ -99,47 +100,43 @@ get_savefile_info(struct savefile_info *save, int saveslot)
 }
 
 void
-save_all(struct game *cur_game, struct user *cur_user, int saveslot)
+save_all(struct game *cur_game, struct user *cur_user)
 {
-	cur_game->save = saveslot;
-	save_info(cur_game, cur_user, saveslot);
-	save_map(cur_game, saveslot);
-	save_player(cur_user, saveslot);
+	save_info(cur_game, cur_user);
+	save_map(cur_game);
+	save_player(cur_user);
 }
 
 void
-load_all(struct game *cur_game, struct user *cur_user, int saveslot)
+load_all(struct game *cur_game, struct user *cur_user)
 {
-	load_map(cur_game, saveslot);
-	load_player(cur_user, saveslot);
+	load_map(cur_game);
+	load_player(cur_user);
 	cur_game->state = LOADED;
-	cur_game->save = saveslot;
 }
 
 static void
-save_info(struct game *cur_game, struct user *cur_user, int saveslot)
+save_info(struct game *cur_game, struct user *cur_user)
 {
-	char filename[20];
+	char filename[20] = "save/info.txt";
 	FILE *fp;
 	time_t timestamp;
  
 	time(&timestamp);
 	
-	sprintf(filename, "save/save%d/info.txt", saveslot);
 	fp = fopen(filename, "w");
-	/* This stuff needs to come from the character */
-	fprintf(fp, "%s\n%s\n%s\n", "Mr. Bobby (Lv. 20)", "Floor: 37", ctime(&timestamp));
+	/* This stuff needs to come from the character later */
+	fprintf(fp, "%s\n%s\n%s\n", "Fuckity Blue (Lv. 1)", "Floor: 1", ctime(&timestamp));
 	fclose(fp);
 }
 
 static void
-save_map(struct game *cur_game, int saveslot)
+save_map(struct game *cur_game)
 {
-	char filename[20];
+	char filename[20] = "save/maps.txt";
 	int map, i, j;
 	FILE *fp;
 	
-	sprintf(filename, "save/save%d/maps.txt", saveslot);
 	fp = fopen(filename, "w");
 	/* Output dimensions */
 	fprintf(fp, "num_maps=%d\n", cur_game->num_maps);
@@ -158,14 +155,13 @@ save_map(struct game *cur_game, int saveslot)
 }
 
 static void
-load_map(struct game *cur_game, int saveslot)
+load_map(struct game *cur_game)
 {
-	char filename[20];
+	char filename[20] = "save/maps.txt";
 	int map, i, j;
 	int rows, cols;
 	FILE *fp;
 	
-	sprintf(filename, "save/save%d/maps.txt", saveslot);
 	fp = fopen(filename, "r");
 	/* Read in dimensions */
 	fscanf(fp, "num_maps=%d\n", &cur_game->num_maps);
@@ -187,13 +183,12 @@ load_map(struct game *cur_game, int saveslot)
 }
 
 static void
-save_player(struct user *cur_user, int saveslot)
+save_player(struct user *cur_user)
 {
-	char filename[20];
+	char filename[20] = "save/user.txt";
 	int map, i, j;
 	FILE *fp;
 	
-	sprintf(filename, "save/save%d/user.txt", saveslot);
 	fp = fopen(filename, "w");
 	/* Output current location */
 	fprintf(fp, "map=%d\n", cur_user->map);
@@ -217,14 +212,13 @@ save_player(struct user *cur_user, int saveslot)
 }
 
 static void
-load_player(struct user *cur_user, int saveslot)
+load_player(struct user *cur_user)
 {
-	char filename[20];
+	char filename[20] = "save/user.txt";
 	int map, i, j;
 	int rows, cols;
 	FILE *fp;
 	
-	sprintf(filename, "save/save%d/user.txt", saveslot);
 	fp = fopen(filename, "r");
 	/* Input player location */
 	fscanf(fp, "map=%d\n", &cur_user->map);

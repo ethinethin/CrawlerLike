@@ -188,7 +188,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 	switch(*(*(cur_game->maps[cur_user->map].tiles + wall_coords[wall_num].row) + wall_coords[wall_num].col)) {
 		case WALL:
 			draw_sprites(cur_game, walls,
-				     sprite_num + wall_dim[wall_num].sprite,
+				     sprite_num + wall_dim[wall_num].sprite + 4,
 				     wall_dim[wall_num].dim.x + x_val,
 				     wall_dim[wall_num].dim.y + y_val,
 				     wall_dim[wall_num].dim.w,
@@ -196,7 +196,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     255,
 				     wall_dim[wall_num].flip);
 			draw_sprites(cur_game, walls,
-				     wall_dim[wall_num].sprite,
+				     sprite_num + wall_dim[wall_num].sprite,
 				     wall_dim[wall_num].dim.x + x_val,
 				     wall_dim[wall_num].dim.y + y_val,
 				     wall_dim[wall_num].dim.w,
@@ -206,7 +206,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 			break;
 		case DOOR:
 			draw_sprites(cur_game, walls,
-				     sprite_num + wall_dim[wall_num].sprite + 2,
+				     sprite_num + wall_dim[wall_num].sprite + 6,
 				     wall_dim[wall_num].dim.x + x_val,
 				     wall_dim[wall_num].dim.y + y_val,
 				     wall_dim[wall_num].dim.w,
@@ -214,7 +214,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     255,
 				     wall_dim[wall_num].flip);
 			draw_sprites(cur_game, walls,
-				     wall_dim[wall_num].sprite + 2,
+				     sprite_num + wall_dim[wall_num].sprite + 2,
 				     wall_dim[wall_num].dim.x + x_val,
 				     wall_dim[wall_num].dim.y + y_val,
 				     wall_dim[wall_num].dim.w,
@@ -243,7 +243,7 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	check_walls(cur_game, cur_user, walls);
 	/* Draw all walls */
 	for (i = 0; i < 25; i++) {
-		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], 4);
+		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], 8);
 	}
 	/* Output white grid */
 	draw_rect(cur_game, 341, 10, 929, 700, SDL_FALSE, "white");
