@@ -37,12 +37,13 @@ check_directories(void)
 void
 save_opts(struct game *cur_game)
 {
+	char filename[20] = "save/options.ini";
 	FILE *fp;
 	
 	/* First time this is accessed, make sure the directories exist */
 	if (checked_directories == SDL_FALSE) check_directories();
 	
-	fp = fopen("options.ini", "w");
+	fp = fopen(filename, "w");
 	if (fp == NULL) {
 		printf("Could not open options.ini\n");
 		exit(1);
@@ -58,12 +59,13 @@ save_opts(struct game *cur_game)
 void
 load_opts(struct game *cur_game)
 {
+	char filename[20] = "save/options.ini";
 	FILE *fp;
 	
 	/* First time this is accessed, make sure the directories exist */
 	if (checked_directories == SDL_FALSE) check_directories();
 	
-	fp = fopen("options.ini", "r");
+	fp = fopen(filename, "r");
 	if (fp == NULL) {
 		/* File does not exist, keep the default values */
 		return;
