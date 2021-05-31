@@ -11,14 +11,14 @@
 /* Function prototypes */
 static void		draw_title(struct game *cur_game, SDL_bool save_exists);
 static void		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen, SDL_bool save_exists);
+static void		draw_new(struct game *cur_game);
+static void		new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y);
 static void		draw_options(struct game *cur_game);
 static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
 static SDL_bool		yes_no(struct game *cur_game, char *message);
 static void		draw_yesno(struct game *cur_game, char *message);
 static int		yesno_click(int x, int y);
-static void		draw_new(struct game *cur_game);
-static void		new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y);
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
 static void		exit_game(struct game *cur_game, struct user *cur_user);
 
@@ -35,7 +35,7 @@ title(struct game *cur_game, struct user *cur_user)
 	
 	
 	/* See if there is a game to load */
-	get_savefile_info(&info);
+	load_info(&info);
 
 	whichscreen = TITLE;
 	loop = SDL_TRUE;
@@ -45,7 +45,7 @@ title(struct game *cur_game, struct user *cur_user)
 		if (whichscreen == TITLE) draw_title(cur_game, info.exists);
 		else if (whichscreen == OPTIONS) draw_options(cur_game);
 		else if (whichscreen == NEWGAME) draw_new(cur_game);
-		render_present(cur_game);
+		render_present(cur_game, SDL_FALSE);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
@@ -73,6 +73,8 @@ title(struct game *cur_game, struct user *cur_user)
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			x = event.button.x / cur_game->display.scale_w;
 			y = event.button.y / cur_game->display.scale_h;
+			/* Poll until you get mouse up event or the next click might get lost */
+			while (event.type != SDL_MOUSEBUTTONUP) SDL_PollEvent(&event);
 			if (whichscreen == TITLE) title_click(cur_game, cur_user, x, y, &whichscreen, info.exists);
 			else if (whichscreen == OPTIONS) options_click(cur_game, x, y, &whichscreen);
 			else if (whichscreen == NEWGAME) new_click(cur_game, cur_user, &whichscreen, x, y);
@@ -110,7 +112,7 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				return;
 			}
 		} else if (cur_game->state == LOADED) {
-			if (yes_no(cur_game, "Game in progress will be\nerased.\n\nIs this okay?") == SDL_TRUE) {
+			if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?") == SDL_TRUE) {
 				*whichscreen = NEWGAME;
 				return;
 			}
@@ -135,6 +137,42 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				*whichscreen = GAMESCREEN;
 			}
 		}
+	}
+}
+
+static void
+draw_new(struct game *cur_game)
+{
+	draw_sentence(cur_game, 20, 20, "New Game", 0.5);
+	draw_sentence(cur_game, 100, 187, "Easy", 0.1);
+	draw_sentence(cur_game, 100, 212, "Normal", 0.1);
+	draw_sentence(cur_game, 100, 237, "Hard", 0.1);
+	draw_sentence(cur_game, 100, 262, "Endless", 0.1);
+	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
+}
+
+static void
+new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y)
+{
+	int levels;
+	
+	levels = 0;
+	if (x >= 102 && x < 177 && y >= 187 && y < 207) {
+		levels = 25;
+	} else if (x >= 102 && x < 213 && y >= 212 && y < 232) {
+		levels = 50;
+	} else if (x >= 102 && x < 175 && y >= 237 && y < 257) {
+		levels = 100;
+	} else if (x >= 102 && x < 230 && y >= 262 && y < 282) {
+		levels = 200;
+	} else if (x >= 13 && x < 567 && y >= 678 && y < 705) {
+		*whichscreen = TITLE;
+	}
+	/* See if they picked a difficulty */
+	if (levels != 0) {
+		if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
+		new_game(cur_game, cur_user, levels, 16, 16);
+		*whichscreen = GAMESCREEN;
 	}
 }
 
@@ -344,42 +382,6 @@ yesno_click(int x, int y)
 		}
 	}
 	return RESULTS_NULL;
-}
-
-static void
-draw_new(struct game *cur_game)
-{
-	draw_sentence(cur_game, 20, 20, "New Game", 0.5);
-	draw_sentence(cur_game, 100, 187, "Easy", 0.1);
-	draw_sentence(cur_game, 100, 212, "Normal", 0.1);
-	draw_sentence(cur_game, 100, 237, "Hard", 0.1);
-	draw_sentence(cur_game, 100, 262, "Endless", 0.1);
-	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
-}
-
-static void
-new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y)
-{
-	int levels;
-	
-	levels = 0;
-	if (x >= 102 && x < 177 && y >= 187 && y < 207) {
-		levels = 25;
-	} else if (x >= 102 && x < 213 && y >= 212 && y < 232) {
-		levels = 50;
-	} else if (x >= 102 && x < 175 && y >= 237 && y < 257) {
-		levels = 100;
-	} else if (x >= 102 && x < 230 && y >= 262 && y < 282) {
-		levels = 200;
-	} else if (x >= 13 && x < 567 && y >= 678 && y < 705) {
-		*whichscreen = TITLE;
-	}
-	/* See if they picked a difficulty */
-	if (levels != 0) {
-		if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
-		new_game(cur_game, cur_user, levels, 16, 16);
-		*whichscreen = GAMESCREEN;
-	}
 }
 
 static void

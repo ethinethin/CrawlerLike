@@ -21,10 +21,11 @@ struct seen {
 
 struct character {
 	char *name;
+	int level;
 	struct stats {
 		int life;
-		int energy;
-		int focus;
+		int stamina;
+		int magic;
 		int experience;
 		int attack;
 		int defense;
@@ -46,8 +47,11 @@ enum dirs { NORTH, EAST, SOUTH, WEST };
 extern void		init_seen(struct seen *cur_seen, int rows, int cols);
 extern void		kill_seen(struct seen *cur_seen);
 extern void		update_seen(struct user *cur_user);
+extern void		kill_char(struct user *cur_user);
+extern void		init_char(struct user *cur_user);
 extern SDL_bool		move_player(struct map *cur_map, struct user *cur_user, int move);
 extern void		turn_player(struct user *cur_user, int turn);
 extern void		change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user);
+extern void		char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
 
 #endif

@@ -15,13 +15,12 @@ void
 display_init(struct game *cur_game)
 {
 	SDL_DisplayMode dm;
-
+	
 	/* Create the main window */
 	if (cur_game->display.mode == FULLSCREEN_DESKTOP) {
-		printf("%d\n", SDL_GetDesktopDisplayMode(0, &dm));
+		SDL_GetDesktopDisplayMode(0, &dm);
 		cur_game->display.w = dm.w;
 		cur_game->display.h = dm.h;
-		printf("%d %d\n", dm.w, dm.h);
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else if (cur_game->display.mode == FULLSCREEN) {
 		cur_game->display.window = SDL_CreateWindow(cur_game->display.name, 0, 0, cur_game->display.w, cur_game->display.h, SDL_WINDOW_FULLSCREEN);
@@ -50,6 +49,7 @@ display_quit(struct game *cur_game)
 {
 	unload_sprites(cur_game);
 	unload_font(cur_game);
+	if (cur_game->display.view != NULL) SDL_DestroyTexture(cur_game->display.output);
 	SDL_DestroyTexture(cur_game->display.output);
 	SDL_DestroyRenderer(cur_game->display.renderer);
 	cur_game->display.renderer = NULL;
@@ -133,7 +133,7 @@ render_clear(struct game *cur_game, char *col)
 }
 
 void
-render_present(struct game *cur_game)
+render_present(struct game *cur_game, SDL_bool ingame)
 {
 	SDL_Rect src = { 0, 0, 1280, 720 };
 	SDL_Rect dest = { 0, 0, cur_game->display.w, cur_game->display.h };
@@ -147,10 +147,8 @@ render_present(struct game *cur_game)
 	/* Copy the output texture to the renderer */
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &src, &dest);
 	/* Copy the view */
-	if (cur_game->display.view != NULL) {
+	if (ingame == SDL_TRUE) {
 		SDL_RenderCopy(cur_game->display.renderer, cur_game->display.view, &view, &view_out);
-		SDL_DestroyTexture(cur_game->display.view);
-		cur_game->display.view = NULL;
 	}
 	/* Present */
 	SDL_RenderPresent(cur_game->display.renderer);

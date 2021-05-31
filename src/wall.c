@@ -232,9 +232,12 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	struct coords walls[25];
 	int draw_order[25] = { 20, 21, 22, 23, 24, 14, 15, 16, 17, 19, 18, 9, 10, 11, 12, 13, 5, 6, 7, 8, 2, 3, 4, 0, 1 };
 
-	/* Set up viewport texture and output to it */
-	cur_game->display.view = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1280, 720);
+	/* Set up viewport texture, output to it and clear it */
+	if (cur_game->display.view == NULL) {
+		cur_game->display.view = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1280, 720);
+	}
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.view);
+	SDL_RenderClear(cur_game->display.renderer);
 	/* Draw black background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");
 	/* Determine values for all walls depending on user facing */

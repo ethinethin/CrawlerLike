@@ -56,7 +56,7 @@ main()
 		/* draw map, player, and render */
 		render_clear(cur_game, "darkred");
 		draw_screen(cur_game, cur_user);
-		render_present(cur_game);
+		render_present(cur_game, SDL_TRUE);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
@@ -86,6 +86,9 @@ main()
 					break;
 				case SDLK_SPACE: /* change level */
 					change_level(cur_game, cur_game->maps + cur_user->map, cur_user);
+					break;
+				case SDLK_c: /* character screen */
+					char_screen(cur_game, cur_user, SDL_TRUE);
 					break;
 			}
 			update_seen(cur_user);

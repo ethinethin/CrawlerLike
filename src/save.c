@@ -37,7 +37,7 @@ check_directories(void)
 void
 save_opts(struct game *cur_game)
 {
-	char filename[20] = "save/options.ini";
+	char filename[20] = "save/options.txt";
 	FILE *fp;
 	
 	/* First time this is accessed, make sure the directories exist */
@@ -45,7 +45,7 @@ save_opts(struct game *cur_game)
 	
 	fp = fopen(filename, "w");
 	if (fp == NULL) {
-		printf("Could not open options.ini\n");
+		printf("Could not open options.txt\n");
 		exit(1);
 	}
 	
@@ -59,7 +59,7 @@ save_opts(struct game *cur_game)
 void
 load_opts(struct game *cur_game)
 {
-	char filename[20] = "save/options.ini";
+	char filename[20] = "save/options.txt";
 	FILE *fp;
 	
 	/* First time this is accessed, make sure the directories exist */
@@ -80,8 +80,24 @@ load_opts(struct game *cur_game)
 	fclose(fp);
 }
 
+static void
+save_info(struct game *cur_game, struct user *cur_user)
+{
+	char filename[20] = "save/info.txt";
+	FILE *fp;
+	time_t timestamp;
+ 
+	time(&timestamp);
+	
+	fp = fopen(filename, "w");
+	/* This may be important later */
+	fprintf(fp, "Game saved: %s", ctime(&timestamp));
+	fprintf(fp, "%s\n%s\n", "Line intentionally left blank", "Line intentionally left blank");
+	fclose(fp);
+}
+
 void
-get_savefile_info(struct savefile_info *save)
+load_info(struct savefile_info *save)
 {
 	char filename[20] = "save/info.txt";
 	FILE *fp;
@@ -115,21 +131,6 @@ load_all(struct game *cur_game, struct user *cur_user)
 	load_map(cur_game);
 	load_player(cur_user);
 	cur_game->state = LOADED;
-}
-
-static void
-save_info(struct game *cur_game, struct user *cur_user)
-{
-	char filename[20] = "save/info.txt";
-	FILE *fp;
-	time_t timestamp;
- 
-	time(&timestamp);
-	
-	fp = fopen(filename, "w");
-	/* This stuff needs to come from the character later */
-	fprintf(fp, "%s\n%s\n%s\n", "Fuckity Blue (Lv. 1)", "Floor: 1", ctime(&timestamp));
-	fclose(fp);
 }
 
 static void
