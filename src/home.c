@@ -69,6 +69,9 @@ title(struct game *cur_game, struct user *cur_user)
 					if (whichscreen == TITLE && cur_game->state == LOADED) loop = SDL_FALSE;
 					else whichscreen = TITLE;
 					break;
+				case SDLK_c:
+					char_screen(cur_game, cur_user, SDL_FALSE);
+					break;
 			}
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			x = event.button.x / cur_game->display.scale_w;

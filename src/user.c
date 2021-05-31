@@ -7,6 +7,7 @@
 /* Function prototypes */
 static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
 static void	char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y);
+static void	point_to_stats(struct user *cur_user);
 
 
 void
@@ -51,8 +52,8 @@ init_char(struct user *cur_user)
 	/* Make a fake character */
 	cur_user->character = malloc(sizeof(*cur_user->character));
 	cur_user->character->name = malloc(11);
-	strncpy(cur_user->character->name, "Mr. Fake", 10);
-	cur_user->character->level = 1;
+	strncpy(cur_user->character->name, "Mr. Faker", 10);
+	cur_user->character->level = 999;
 	cur_user->character->cur_stats.life = 10;
 	cur_user->character->cur_stats.stamina = 10;
 	cur_user->character->cur_stats.magic = 10;
@@ -156,10 +157,86 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	kill_char(cur_user);
 }
 
+enum type { TYPE_RECT, TYPE_TEXT, TYPE_SPRITE };
+struct char_screen_stats {
+	SDL_Rect rect;
+	int type;
+	float scale;
+	char *line;
+	void *val1;
+	void *val2;
+	void *val3;
+} char_screen_stats[] = {
+	{ { 0, 0, 1152, 648 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 10, 94, 528, 104 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 10, 228, 528, 146 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 10, 404, 373, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 393, 404, 490, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 893, 404, 249, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 548, 94, 594, 280 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 10, 10, 0, 0}, TYPE_TEXT, 0.20, "Name: %s (Lv. %d)", NULL, NULL, NULL },
+	{ { 14, 72, 0, 0}, TYPE_TEXT, 0.1, "Major Stats (%d points)", NULL, NULL, NULL },
+	{ { 18, 102, 0, 0}, TYPE_TEXT, 0.1, "Life:       %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 124, 0, 0}, TYPE_TEXT, 0.1, "Stamina:    %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 146, 0, 0}, TYPE_TEXT, 0.1, "Magic:      %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 168, 0, 0}, TYPE_TEXT, 0.1, "Experience: %3d / %3d", NULL, NULL, NULL },
+	{ { 14, 206, 0, 0}, TYPE_TEXT, 0.1, "Minor Stats (%d points)", NULL, NULL, NULL },
+	{ { 18, 236, 0, 0}, TYPE_TEXT, 0.1, "Attack:     %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 258, 0, 0}, TYPE_TEXT, 0.1, "Defense:    %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 280, 0, 0}, TYPE_TEXT, 0.1, "Dodge:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 302, 0, 0}, TYPE_TEXT, 0.1, "Power:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 324, 0, 0}, TYPE_TEXT, 0.1, "Spirit:     %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 346, 0, 0}, TYPE_TEXT, 0.1, "Avoid:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 14, 382, 0, 0}, TYPE_TEXT, 0.1, "Equipped Gear", NULL, NULL, NULL },
+	{ { 401, 382, 0, 0}, TYPE_TEXT, 0.1, "Inventory", NULL, NULL, NULL },
+	{ { 901, 382, 0, 0}, TYPE_TEXT, 0.1, "System", NULL, NULL, NULL },
+	{ { 552, 72, 0, 0}, TYPE_TEXT, 0.1, "Information", NULL, NULL, NULL },
+	{ { 25, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 145, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 265, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 25, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 145, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 265, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 408, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 528, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 648, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 768, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 408, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 528, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 648, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 768, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 908, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 1028, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 908, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 1028, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }
+};
+
+int points_1 = 5;
+int points_2 = 10;
+static void
+point_to_stats(struct user *cur_user)
+{
+	/* Have the structure above point to the appropriate variables */
+	char_screen_stats[7].val3 = cur_user->character->name; char_screen_stats[7].val1 = &cur_user->character->level;
+	char_screen_stats[8].val1 = &points_1;
+	char_screen_stats[9].val1 = &cur_user->character->cur_stats.life; char_screen_stats[9].val2 = &cur_user->character->max_stats.life; 
+	char_screen_stats[10].val1 = &cur_user->character->cur_stats.stamina; char_screen_stats[10].val2 = &cur_user->character->max_stats.stamina; 
+	char_screen_stats[11].val1 = &cur_user->character->cur_stats.magic; char_screen_stats[11].val2 = &cur_user->character->max_stats.magic; 
+	char_screen_stats[12].val1 = &cur_user->character->cur_stats.experience; char_screen_stats[12].val2 = &cur_user->character->max_stats.experience; 
+	char_screen_stats[13].val1 = &points_2;
+	char_screen_stats[14].val1 = &cur_user->character->cur_stats.attack; char_screen_stats[14].val2 = &cur_user->character->max_stats.attack; 
+	char_screen_stats[15].val1 = &cur_user->character->cur_stats.defense; char_screen_stats[15].val2 = &cur_user->character->max_stats.defense; 
+	char_screen_stats[16].val1 = &cur_user->character->cur_stats.dodge; char_screen_stats[16].val2 = &cur_user->character->max_stats.dodge; 
+	char_screen_stats[17].val1 = &cur_user->character->cur_stats.power; char_screen_stats[17].val2 = &cur_user->character->max_stats.power; 
+	char_screen_stats[18].val1 = &cur_user->character->cur_stats.spirit; char_screen_stats[18].val2 = &cur_user->character->max_stats.spirit; 
+	char_screen_stats[19].val1 = &cur_user->character->cur_stats.avoid; char_screen_stats[19].val2 = &cur_user->character->max_stats.avoid; 
+}
+
 static void
 draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
-{//1152x648 @ 64, 36
+{
 	char line[100];
+	int i;
 	SDL_Rect out_src = { 0, 0, 1280, 720 };
 	SDL_Rect out_dest = { 0, 0, cur_game->display.w, cur_game->display.h };
 	SDL_Rect view_src = { 341, 10, 929, 700 };
@@ -167,56 +244,30 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	SDL_Rect screen_src = { 0, 0, 1152, 648 };
 	SDL_Rect screen_dest = { 64, 36, 1152, 648 };
 	SDL_Texture *texture;
-	int points_1 = 5;
-	int points_2 = 10;
 	
 	/* Create a custom texture and render to it */
 	texture = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1152, 648);
 	SDL_SetRenderTarget(cur_game->display.renderer, texture);
-	/* Draw outline */
-	draw_rect(cur_game, 0, 0, 1152, 648, SDL_TRUE, "black");
-	draw_rect(cur_game, 0, 0, 1152, 648, SDL_FALSE, "white");
-	/* Display character name */
-	sprintf(line, "Name: %s (Lv. %d)", cur_user->character->name, cur_user->character->level);
-	draw_sentence_xlimited(cur_game, 10, 10, line, 0.25, 1152);
-	/* Draw 4 major stats */
-	sprintf(line, "Major Stats (%d points)", points_1);
-	draw_sentence_xlimited(cur_game, 18, 82, line, 0.125, 1152);
-	draw_rect(cur_game, 10, 108, 608, 114, SDL_FALSE, "white");
-	sprintf(line, "Life:       %3d / %3d", cur_user->character->cur_stats.life, cur_user->character->max_stats.life);
-	draw_sentence_xlimited(cur_game, 18, 116, line, 0.125, 1152);
-	sprintf(line, "Stamina:    %3d / %3d", cur_user->character->cur_stats.stamina, cur_user->character->max_stats.stamina);
-	draw_sentence_xlimited(cur_game, 18, 142, line, 0.125, 1152);
-	sprintf(line, "Magic:      %3d / %3d", cur_user->character->cur_stats.magic, cur_user->character->max_stats.magic);
-	draw_sentence_xlimited(cur_game, 18, 168, line, 0.125, 1152);
-	sprintf(line, "Experience: %3d / %3d", cur_user->character->cur_stats.experience, cur_user->character->max_stats.experience);
-	draw_sentence_xlimited(cur_game, 18, 194, line, 0.125, 1152);
-	/* Display 6 minor stats */
-	sprintf(line, "Minor Stats (%d points)", points_2);
-	draw_sentence_xlimited(cur_game, 18, 242, line, 0.125, 1152);
-	draw_rect(cur_game, 10, 268, 608, 171, SDL_FALSE, "white");
-	sprintf(line, "Attack:     %3d (%3d)", cur_user->character->cur_stats.attack, cur_user->character->max_stats.attack);
-	draw_sentence_xlimited(cur_game, 18, 276, line, 0.125, 1152);
-	sprintf(line, "Defense:    %3d (%3d)", cur_user->character->cur_stats.defense, cur_user->character->max_stats.defense);
-	draw_sentence_xlimited(cur_game, 18, 302, line, 0.125, 1152);
-	sprintf(line, "Dodge:      %3d (%3d)", cur_user->character->cur_stats.dodge, cur_user->character->max_stats.dodge);
-	draw_sentence_xlimited(cur_game, 18, 328, line, 0.125, 1152);
-	sprintf(line, "Power:      %3d (%3d)", cur_user->character->cur_stats.power, cur_user->character->max_stats.power);
-	draw_sentence_xlimited(cur_game, 18, 354, line, 0.125, 1152);
-	sprintf(line, "Spirit:     %3d (%3d)", cur_user->character->cur_stats.spirit, cur_user->character->max_stats.spirit);
-	draw_sentence_xlimited(cur_game, 18, 380, line, 0.125, 1152);
-	sprintf(line, "Avoid:      %3d (%3d)", cur_user->character->cur_stats.avoid, cur_user->character->max_stats.avoid);
-	draw_sentence_xlimited(cur_game, 18, 406, line, 0.125, 1152);
-	/* Display equipped 6 slots */
-	sprintf(line, "Equipped Gear");
-	draw_sentence_xlimited(cur_game, 18, 449, line, 0.125, 1152);
-	draw_rect(cur_game, 10, 485, 373, 154, SDL_FALSE, "white");
-	/* Display inventory 8 slots */
-	sprintf(line, "Inventory");
-	draw_sentence_xlimited(cur_game, 401, 449, line, 0.125, 1152);
-	draw_rect(cur_game, 393, 485, 670, 154, SDL_FALSE, "white");
-	//393, 485, 670, 150
-	
+	/* Point to elements of interest */
+	point_to_stats(cur_user);
+	/* Display elements from the above structure */
+	for (i = 0; i < 42; i++) {
+		if (char_screen_stats[i].type == TYPE_RECT) {
+			draw_rect(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, char_screen_stats[i].rect.w, char_screen_stats[i].rect.h, SDL_TRUE, "black");
+			draw_rect(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, char_screen_stats[i].rect.w, char_screen_stats[i].rect.h, SDL_FALSE, "white");
+		} else if (char_screen_stats[i].val3 != NULL) {
+			sprintf(line, char_screen_stats[i].line, (char *) char_screen_stats[i].val3, *((int *) char_screen_stats[i].val1));
+			draw_sentence_xlimited(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, line, char_screen_stats[i].scale, 1152);
+		} else if (char_screen_stats[i].val2 != NULL) {
+			sprintf(line, char_screen_stats[i].line, *((int *) char_screen_stats[i].val1), *((int *) char_screen_stats[i].val2));
+			draw_sentence_xlimited(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, line, char_screen_stats[i].scale, 1152);
+		} else if (char_screen_stats[i].val1 != NULL) {
+			sprintf(line, char_screen_stats[i].line, *((int *) char_screen_stats[i].val1));
+			draw_sentence_xlimited(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, line, char_screen_stats[i].scale, 1152);
+		} else {
+			draw_sentence_xlimited(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, char_screen_stats[i].line, char_screen_stats[i].scale, 1152);
+		}
+	}
 	/* Switch to rendering target and output current output */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	SDL_RenderClear(cur_game->display.renderer);
