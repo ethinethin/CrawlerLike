@@ -31,6 +31,7 @@ title(struct game *cur_game, struct user *cur_user)
 	int whichscreen;
 	SDL_Event event;
 	SDL_bool loop;
+	SDL_bool redraw;
 	struct savefile_info info;
 	
 	
@@ -38,18 +39,18 @@ title(struct game *cur_game, struct user *cur_user)
 	load_info(&info);
 
 	whichscreen = TITLE;
+	/* Draw the title screen */
+	render_clear(cur_game, "darkblue");
+	draw_title(cur_game, info.exists);
+	render_present(cur_game, SDL_FALSE);
+	redraw = SDL_FALSE;
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE && whichscreen != GAMESCREEN) {
-		/* draw appropriate screen and render */
-		render_clear(cur_game, "darkblue");
-		if (whichscreen == TITLE) draw_title(cur_game, info.exists);
-		else if (whichscreen == OPTIONS) draw_options(cur_game);
-		else if (whichscreen == NEWGAME) draw_new(cur_game);
-		render_present(cur_game, SDL_FALSE);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
+			redraw = SDL_TRUE;
 			if (whichscreen == TITLE) {
 				if (cur_game->state == UNLOADED) {
 					loop = SDL_FALSE;
@@ -64,6 +65,7 @@ title(struct game *cur_game, struct user *cur_user)
 				whichscreen = TITLE;
 			}
 		} else if (event.type == SDL_KEYDOWN) {
+			redraw = SDL_TRUE;
 			switch (event.key.keysym.sym) {
 				case SDLK_ESCAPE:
 					if (whichscreen == TITLE && cur_game->state == LOADED) loop = SDL_FALSE;
@@ -74,6 +76,7 @@ title(struct game *cur_game, struct user *cur_user)
 					break;
 			}
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+			redraw = SDL_TRUE;
 			x = event.button.x / cur_game->display.scale_w;
 			y = event.button.y / cur_game->display.scale_h;
 			/* Poll until you get mouse up event or the next click might get lost */
@@ -81,6 +84,15 @@ title(struct game *cur_game, struct user *cur_user)
 			if (whichscreen == TITLE) title_click(cur_game, cur_user, x, y, &whichscreen, info.exists);
 			else if (whichscreen == OPTIONS) options_click(cur_game, x, y, &whichscreen);
 			else if (whichscreen == NEWGAME) new_click(cur_game, cur_user, &whichscreen, x, y);
+		}
+		/* if you're staying in the loop, draw appropriate screen */
+		if (redraw == SDL_TRUE && loop == SDL_TRUE) {
+			render_clear(cur_game, "darkblue");
+			if (whichscreen == TITLE) draw_title(cur_game, info.exists);
+			else if (whichscreen == OPTIONS) draw_options(cur_game);
+			else if (whichscreen == NEWGAME) draw_new(cur_game);
+			render_present(cur_game, SDL_FALSE);
+			redraw = SDL_FALSE;
 		}
 	}
 }

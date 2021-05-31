@@ -8,6 +8,7 @@
 #include "rand.h"
 #include "save.h"
 #include "user.h"
+#include "wall.h"
 
 struct game GAME = {
 	{ 1280,		/* display.w */
@@ -19,6 +20,7 @@ struct game GAME = {
 	  NULL,		/* display.renderer */
 	  NULL,		/* display.output */
 	  NULL,		/* display.view */
+	  NULL,		/* display.char_screen_tex */
 	  SDL_FALSE,	/* display.vsync */
 	  2 },		/* display.mode */
 	{ NULL,		/* sprites.walls */
@@ -37,6 +39,7 @@ struct user USER;
 int
 main()
 {
+	SDL_bool redraw;
 	SDL_Event event;
 	struct game *cur_game;
 	struct user *cur_user;
@@ -50,23 +53,27 @@ main()
 	seed_rng();
 	cur_game->running = SDL_TRUE;
 	title(cur_game, cur_user);
-
+	
+	/* If the game is running after title screen, output the view for the first time */
+	if (cur_game->running == SDL_TRUE) {
+		render_clear(cur_game, "darkred");
+		draw_view(cur_game, cur_user);
+		draw_screen(cur_game, cur_user);
+		render_present(cur_game, SDL_TRUE);
+	}
 	/* Enter main game loop */
 	while (cur_game->running == SDL_TRUE) {
 		/* draw map, player, and render */
-		render_clear(cur_game, "darkred");
-		draw_screen(cur_game, cur_user);
-		render_present(cur_game, SDL_TRUE);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
 			title(cur_game, cur_user);
+			redraw = SDL_TRUE;
 		} else if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_ESCAPE: /* open title screen */
 					title(cur_game, cur_user);
-					continue;
 					break;
 				case SDLK_UP: /* move forward */
 				case SDLK_w:
@@ -91,8 +98,17 @@ main()
 					char_screen(cur_game, cur_user, SDL_TRUE);
 					break;
 			}
+			redraw = SDL_TRUE;
+		}
+		/* Output the view if the player did something */
+		if (redraw == SDL_TRUE && cur_game->running == SDL_TRUE) {
 			update_seen(cur_user);
-		}			
+			render_clear(cur_game, "darkred");
+			draw_view(cur_game, cur_user);
+			draw_screen(cur_game, cur_user);
+			render_present(cur_game, SDL_TRUE);
+			redraw = SDL_FALSE;
+		}
 	}
 
 	/* Kill display, SDL, and exit */
