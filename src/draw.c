@@ -63,7 +63,7 @@ display_quit(struct game *cur_game)
 }
 
 /* Sprite information */
-int num_walls = 16;
+int num_walls = 24;
 int sprite_w = 64;
 int sprite_h = 64;
 static void

@@ -37,6 +37,7 @@ struct coords {
 };
 
 struct map {
+	int sprite;
 	int rows;
 	int cols;
 	int **tiles;

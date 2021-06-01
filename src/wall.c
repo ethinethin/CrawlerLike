@@ -184,6 +184,8 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 {
 	int x_val = 342;
 	int y_val = 11;
+	/* Adjust sprite */
+	sprite_num *= 8;
 	/* Check if you need to render the wall */
 	switch(*(*(cur_game->maps[cur_user->map].tiles + wall_coords[wall_num].row) + wall_coords[wall_num].col)) {
 		case WALL:
@@ -243,7 +245,7 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	check_walls(cur_game, cur_user, walls);
 	/* Draw all walls */
 	for (i = 0; i < 25; i++) {
-		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], 8);
+		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], cur_game->maps[cur_user->map].sprite);
 	}
 	/* Output white outline */
 	draw_rect(cur_game, 341, 10, 929, 700, SDL_FALSE, "white");

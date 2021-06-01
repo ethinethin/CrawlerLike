@@ -85,6 +85,8 @@ populate_map(struct map *cur_map, int row_start, int col_start)
 	/* Remove some random walls */
 	make_dungeon(cur_map);
 	free(room);
+	/* Pick a random wall sprite */
+	cur_map->sprite = rand_num(0, 2);
 }
 
 static void

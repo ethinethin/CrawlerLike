@@ -147,6 +147,7 @@ save_map(struct game *cur_game)
 	fprintf(fp, "cols=%d\n", cur_game->maps[0].cols);
 	/* Output each map */
 	for (map = 0; map < cur_game->num_maps; map++) {
+		fprintf(fp, "sprite=%d\n", cur_game->maps[map].sprite);
 		for (i = 0; i < cur_game->maps[map].rows; i++) {
 			for (j = 0; j < cur_game->maps[map].cols; j++) {
 				fprintf(fp, "%d", *(*(cur_game->maps[map].tiles + i) + j));
@@ -175,6 +176,7 @@ load_map(struct game *cur_game)
 	/* Input each map */
 	for (map = 0; map < cur_game->num_maps; map++) {
 		init_map(&cur_game->maps[map], rows, cols);
+		fscanf(fp, "sprite=%d\n", &cur_game->maps[map].sprite);
 		for (i = 0; i < rows; i++) {
 			for (j = 0; j < cols; j++) {
 				*(*(cur_game->maps[map].tiles + i) + j) = fgetc(fp) - 48;

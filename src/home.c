@@ -1,3 +1,4 @@
+#include <string.h>
 #include <SDL2/SDL.h>
 #include "draw.h"
 #include "font.h"
@@ -8,7 +9,20 @@
 #include "save.h"
 #include "user.h"
 
+struct menu_item {
+	SDL_Rect rect;
+	int state;
+	char *sentence;
+	float scale;
+	SDL_bool clickable;
+	int results;
+};
+enum gamestate { MENU_LOADED, MENU_UNLOADED, MENU_BOTH };
+
 /* Function prototypes */
+static void		prep_menu_items(struct menu_item *cur_menu);
+static void		draw_menu(struct game *cur_game, struct menu_item cur_menu[]);
+static int		click_menu(struct game *cur_game, struct menu_item cur_menu[], int x, int y);
 static void		draw_title(struct game *cur_game, SDL_bool save_exists);
 static void		title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen, SDL_bool save_exists);
 static void		draw_new(struct game *cur_game);
@@ -98,26 +112,92 @@ title(struct game *cur_game, struct user *cur_user)
 }
 
 static void
+prep_menu_items(struct menu_item *cur_menu)
+{
+	int i;
+	
+	/* If the menu has been processed already, return */
+	if (cur_menu[0].rect.w != 0) return;
+	
+	for (i = 0; cur_menu[i].rect.x != -1; i++) {
+		cur_menu[i].rect.w = strlen(cur_menu[i].sentence) * 192 * cur_menu[i].scale;
+		cur_menu[i].rect.h = (int) (208.0 * cur_menu[i].scale);
+	}
+}
+
+static void
+draw_menu(struct game *cur_game, struct menu_item cur_menu[])
+{
+	int i;
+	SDL_bool draw;
+
+	for (i = 0; cur_menu[i].rect.x != -1; i++) {
+		draw = SDL_FALSE;
+		if (cur_menu[i].state == MENU_BOTH) {
+			draw = SDL_TRUE;
+		} else if (cur_menu[i].state == MENU_LOADED && cur_game->state == LOADED) {
+			draw = SDL_TRUE;
+		} else if (cur_menu[i].state == MENU_UNLOADED && cur_game->state == UNLOADED) {
+			draw = SDL_TRUE;
+		}
+		if (draw == SDL_TRUE) draw_sentence(cur_game, cur_menu[i].rect.x, cur_menu[i].rect.y, cur_menu[i].sentence, cur_menu[i].scale);
+	}
+}
+
+static int
+click_menu(struct game *cur_game, struct menu_item cur_menu[], int x, int y)
+{
+	int i;
+	
+	for (i = 0; cur_menu[i].rect.x != -1; i++) {
+		if (cur_menu[i].clickable == SDL_TRUE && (cur_menu[i].state == MENU_BOTH ||
+		    (cur_menu[i].state == MENU_LOADED && cur_game->state == LOADED) ||
+		    (cur_menu[i].state == MENU_UNLOADED && cur_game->state == UNLOADED))) {
+			if (x >= cur_menu[i].rect.x && x <= cur_menu[i].rect.x + cur_menu[i].rect.w &&
+			    y >= cur_menu[i].rect.y && y <= cur_menu[i].rect.y + cur_menu[i].rect.h) {
+				break;
+			}
+		}
+	}
+	return i;
+}
+
+enum title_menu_results { TITLE_NULL, TITLE_NEW, TITLE_LOAD, TITLE_OPTS, TITLE_BACK, TITLE_EXIT };
+struct menu_item title_menu[] = {
+	{ {20, 20, 0, 0}, MENU_BOTH, "CrawlerLike", 0.5, SDL_FALSE, TITLE_NULL },
+	{ {100, 187, 0, 0}, MENU_BOTH, "New Game", 0.1, SDL_TRUE, TITLE_NEW },
+	{ {100, 212, 0, 0}, MENU_UNLOADED, "Continue Game", 0.1, SDL_TRUE, TITLE_LOAD },
+	{ {100, 287, 0, 0}, MENU_UNLOADED, "Exit", 0.1, SDL_TRUE, TITLE_EXIT }, 
+	{ {100, 287, 0, 0}, MENU_LOADED, "Save and Exit", 0.1, SDL_TRUE, TITLE_EXIT },
+	{ {10, 679, 0, 0}, MENU_LOADED, "Back to Game", 0.15, SDL_TRUE, TITLE_BACK },
+	{ {100, 262, 0, 0}, MENU_BOTH, "Options", 0.1, SDL_TRUE, TITLE_OPTS },
+	{ {-1, -1, 0, 0}, MENU_BOTH, NULL, 0, SDL_FALSE, TITLE_NULL }
+};
+
+
+static void
 draw_title(struct game *cur_game, SDL_bool save_exists)
 {
-	draw_sentence(cur_game, 20, 20, "CrawlerLike", 0.5);
-	draw_sentence(cur_game, 100, 187, "New Game", 0.1);
-	if (save_exists == SDL_TRUE && cur_game->state == UNLOADED) draw_sentence(cur_game, 100, 212, "Continue Game", 0.1);
-	draw_sentence(cur_game, 100, 262, "Options", 0.1);
-	if (cur_game->state == LOADED) {
-		draw_sentence(cur_game, 100, 287, "Save and Exit", 0.1);
-		draw_sentence(cur_game, 10, 679, "Back to Game", 0.15);
-	} else {
-		draw_sentence(cur_game, 100, 287, "Exit", 0.1);
+	/* If no save game exists, get rid of the Continue option */
+	if (save_exists == SDL_FALSE) {
+		title_menu[2].sentence = "";
 	}
+	/* Prep the menu and draw */
+	prep_menu_items(title_menu);
+	draw_menu(cur_game, title_menu);
 }
 
 static void
 title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whichscreen, SDL_bool save_exists)
 {
-	if (x >= 10 && x <= 340 && y >= 679 && y < 709 && cur_game->state == LOADED) {
+	int results;
+	
+	/* Find click results */
+	results = click_menu(cur_game, title_menu, x, y);
+	/* Act on the results */
+	if (title_menu[results].results == TITLE_BACK) {
 		*whichscreen = GAMESCREEN;
-	} else if (x >= 100 && x <= 250 && y >= 187 && y < 207) {
+	} else if (title_menu[results].results == TITLE_NEW) {
 		/* New Game */
 		if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
 			*whichscreen = NEWGAME;
@@ -132,14 +212,14 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				return;
 			}
 		}
-	} else if (x >= 100 && x <= 344 && y >= 212 && y < 232 && cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
+	} else if (title_menu[results].results == TITLE_LOAD && cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
 		/* Clicking Continue Game */
 		*whichscreen = GAMESCREEN;
 		load_all(cur_game, cur_user);
-	} else if (x >= 100 && x <= 233 && y >= 262 && y < 282) {
+	} else if (title_menu[results].results == TITLE_OPTS) {
 		/* Clicking Options */
 		*whichscreen = OPTIONS;
-	} else if (x >= 100 && x <= 344 && y >= 287 && y < 307) {
+	} else if (title_menu[results].results == TITLE_EXIT) {
 		/* Clicking Exit or Save and Exit */
 		if (cur_game->state == UNLOADED) {
 			cur_game->running = SDL_FALSE;
@@ -155,35 +235,47 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 	}
 }
 
+enum new_menu_results { NEW_NULL, NEW_EASY, NEW_NORMAL, NEW_HARD, NEW_ENDLESS, NEW_BACK };
+struct menu_item new_menu[] = {
+	{ {20, 20, 0, 0}, MENU_BOTH, "New Game", 0.5, SDL_FALSE, NEW_NULL },
+	{ {100, 187, 0, 0}, MENU_BOTH, "Easy", 0.1, SDL_TRUE, NEW_EASY },
+	{ {100, 212, 0, 0}, MENU_BOTH, "Normal", 0.1, SDL_TRUE, NEW_NORMAL },
+	{ {100, 237, 0, 0}, MENU_BOTH, "Hard", 0.1, SDL_TRUE, NEW_HARD },
+	{ {100, 262, 0, 0}, MENU_BOTH, "Endless", 0.1, SDL_TRUE, NEW_ENDLESS },
+	{ {10, 679, 0, 0}, MENU_BOTH, "Back to Title Screen", 0.15, SDL_TRUE, NEW_BACK },
+	{ {-1, -1, 0, 0}, MENU_BOTH, NULL, 0, SDL_FALSE, NEW_NULL }
+};
+
 static void
 draw_new(struct game *cur_game)
 {
-	draw_sentence(cur_game, 20, 20, "New Game", 0.5);
-	draw_sentence(cur_game, 100, 187, "Easy", 0.1);
-	draw_sentence(cur_game, 100, 212, "Normal", 0.1);
-	draw_sentence(cur_game, 100, 237, "Hard", 0.1);
-	draw_sentence(cur_game, 100, 262, "Endless", 0.1);
-	draw_sentence(cur_game, 10, 679, "Back to Title Screen", 0.15);
+	/* Prep the menu and draw */
+	prep_menu_items(new_menu);
+	draw_menu(cur_game, new_menu);
 }
 
 static void
 new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x, int y)
 {
 	int levels;
+	int results;
 	
+	/* Find click results */
+	results = click_menu(cur_game, new_menu, x, y);
+	/* Act on the results */
 	levels = 0;
-	if (x >= 102 && x < 177 && y >= 187 && y < 207) {
-		levels = 25;
-	} else if (x >= 102 && x < 213 && y >= 212 && y < 232) {
-		levels = 50;
-	} else if (x >= 102 && x < 175 && y >= 237 && y < 257) {
-		levels = 100;
-	} else if (x >= 102 && x < 230 && y >= 262 && y < 282) {
-		levels = 200;
-	} else if (x >= 13 && x < 567 && y >= 678 && y < 705) {
+	if (new_menu[results].results == NEW_BACK) {
 		*whichscreen = TITLE;
+	} else if (new_menu[results].results == NEW_EASY) {
+		levels = 25;
+	} else if (new_menu[results].results == NEW_NORMAL) {
+		levels = 50;
+	} else if (new_menu[results].results == NEW_HARD) {
+		levels = 100;
+	} else if (new_menu[results].results == NEW_ENDLESS) {
+		levels = 101;
 	}
-	/* See if they picked a difficulty */
+	/* See if they picked a difficulty and set up a game */
 	if (levels != 0) {
 		if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
 		new_game(cur_game, cur_user, levels, 16, 16);
