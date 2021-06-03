@@ -2,13 +2,18 @@
 #include "draw.h"
 #include "font.h"
 #include "main.h"
+#include "rand.h"
 #include "user.h"
 
 /* Function prototypes */
-static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
-static void	char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y);
 static void	point_to_stats(struct user *cur_user);
-
+static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
+static void	draw_stats(struct game *cur_game);
+static void	draw_gear(struct game *cur_game);
+static void	draw_inv(struct game *cur_game);
+static void	draw_sys(struct game *cur_game);
+static void	char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y);
+static void	rando_name(char *name);
 
 void
 init_seen(struct seen *cur_seen, int rows, int cols)
@@ -51,9 +56,9 @@ init_char(struct user *cur_user)
 {
 	/* Make a fake character */
 	cur_user->character = malloc(sizeof(*cur_user->character));
-	cur_user->character->name = malloc(11);
-	strncpy(cur_user->character->name, "Mr. Faker", 10);
-	cur_user->character->level = 999;
+	cur_user->character->name = malloc(sizeof(*cur_user->character->name)*17);
+	rando_name(cur_user->character->name);
+	cur_user->character->level = rand_num(1, 999);
 	cur_user->character->cur_stats.life = 10;
 	cur_user->character->cur_stats.stamina = 10;
 	cur_user->character->cur_stats.magic = 10;
@@ -159,7 +164,7 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	kill_char(cur_user);
 }
 
-enum type { TYPE_RECT, TYPE_TEXT, TYPE_SPRITE };
+enum type { TYPE_RECT, TYPE_TEXT, TYPE_ICON };
 struct char_screen_stats {
 	SDL_Rect rect;
 	int type;
@@ -170,47 +175,47 @@ struct char_screen_stats {
 	void *val3;
 } char_screen_stats[] = {
 	{ { 0, 0, 1152, 648 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 10, 94, 528, 104 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
-	{ { 10, 228, 528, 146 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
-	{ { 10, 404, 373, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 393, 404, 490, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 893, 404, 249, 234 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 548, 94, 594, 280 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 10, 79, 528, 109 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 10, 218, 528, 163 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 10, 409, 373, 232 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 393, 409, 490, 232 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 893, 409, 249, 232 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 548, 79, 594, 302 }, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
 	{ { 10, 10, 0, 0}, TYPE_TEXT, 0.20, "Name: %s (Lv. %d)", NULL, NULL, NULL },
-	{ { 14, 72, 0, 0}, TYPE_TEXT, 0.1, "Major Stats (%d points)", NULL, NULL, NULL },
-	{ { 18, 102, 0, 0}, TYPE_TEXT, 0.1, "Life:       %3d / %3d", NULL, NULL, NULL },
-	{ { 18, 124, 0, 0}, TYPE_TEXT, 0.1, "Stamina:    %3d / %3d", NULL, NULL, NULL },
-	{ { 18, 146, 0, 0}, TYPE_TEXT, 0.1, "Magic:      %3d / %3d", NULL, NULL, NULL },
-	{ { 18, 168, 0, 0}, TYPE_TEXT, 0.1, "Experience: %3d / %3d", NULL, NULL, NULL },
-	{ { 14, 206, 0, 0}, TYPE_TEXT, 0.1, "Minor Stats (%d points)", NULL, NULL, NULL },
-	{ { 18, 236, 0, 0}, TYPE_TEXT, 0.1, "Attack:     %3d (%3d)", NULL, NULL, NULL },
-	{ { 18, 258, 0, 0}, TYPE_TEXT, 0.1, "Defense:    %3d (%3d)", NULL, NULL, NULL },
-	{ { 18, 280, 0, 0}, TYPE_TEXT, 0.1, "Dodge:      %3d (%3d)", NULL, NULL, NULL },
-	{ { 18, 302, 0, 0}, TYPE_TEXT, 0.1, "Power:      %3d (%3d)", NULL, NULL, NULL },
-	{ { 18, 324, 0, 0}, TYPE_TEXT, 0.1, "Spirit:     %3d (%3d)", NULL, NULL, NULL },
-	{ { 18, 346, 0, 0}, TYPE_TEXT, 0.1, "Avoid:      %3d (%3d)", NULL, NULL, NULL },
-	{ { 14, 382, 0, 0}, TYPE_TEXT, 0.1, "Equipped Gear", NULL, NULL, NULL },
-	{ { 401, 382, 0, 0}, TYPE_TEXT, 0.1, "Inventory", NULL, NULL, NULL },
-	{ { 901, 382, 0, 0}, TYPE_TEXT, 0.1, "System", NULL, NULL, NULL },
-	{ { 552, 72, 0, 0}, TYPE_TEXT, 0.1, "Information", NULL, NULL, NULL },
-	{ { 25, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 145, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 265, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 25, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 145, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 265, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 408, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
-	{ { 528, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 648, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 768, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 408, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 528, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 648, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 768, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 908, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 1028, 415, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 908, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 1028, 525, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }
+	{ { 14, 57, 0, 0}, TYPE_TEXT, 0.1, "Major Stats (%d points)", NULL, NULL, NULL },
+	{ { 18, 87, 0, 0}, TYPE_TEXT, 0.1, "Life:       %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 113, 0, 0}, TYPE_TEXT, 0.1, "Stamina:    %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 139, 0, 0}, TYPE_TEXT, 0.1, "Magic:      %3d / %3d", NULL, NULL, NULL },
+	{ { 18, 165, 0, 0}, TYPE_TEXT, 0.1, "Experience: %3d / %3d", NULL, NULL, NULL },
+	{ { 14, 196, 0, 0}, TYPE_TEXT, 0.1, "Minor Stats (%d points)", NULL, NULL, NULL },
+	{ { 18, 226, 0, 0}, TYPE_TEXT, 0.1, "Attack:     %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 252, 0, 0}, TYPE_TEXT, 0.1, "Defense:    %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 278, 0, 0}, TYPE_TEXT, 0.1, "Dodge:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 304, 0, 0}, TYPE_TEXT, 0.1, "Power:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 330, 0, 0}, TYPE_TEXT, 0.1, "Spirit:     %3d (%3d)", NULL, NULL, NULL },
+	{ { 18, 356, 0, 0}, TYPE_TEXT, 0.1, "Avoid:      %3d (%3d)", NULL, NULL, NULL },
+	{ { 14, 387, 0, 0}, TYPE_TEXT, 0.1, "Equipped Gear", NULL, NULL, NULL },
+	{ { 401, 387, 0, 0}, TYPE_TEXT, 0.1, "Inventory", NULL, NULL, NULL },
+	{ { 901, 387, 0, 0}, TYPE_TEXT, 0.1, "System", NULL, NULL, NULL },
+	{ { 552, 57, 0, 0}, TYPE_TEXT, 0.1, "Information", NULL, NULL, NULL },
+	{ { 25, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 145, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 265, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 25, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 145, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 265, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 408, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }, 
+	{ { 528, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 648, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 768, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 408, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 528, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 648, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 768, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 908, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 1028, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 908, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 1028, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }
 };
 
 int points_1 = 5;
@@ -218,8 +223,6 @@ int points_2 = 10;
 static void
 point_to_stats(struct user *cur_user)
 {
-	/* Has this been done before? Don't do it again */
-	if (char_screen_stats[7].val3 == cur_user->character->name) return;
 	/* Have the structure above point to the appropriate variables */
 	char_screen_stats[7].val3 = cur_user->character->name; char_screen_stats[7].val1 = &cur_user->character->level;
 	char_screen_stats[8].val1 = &points_1;
@@ -248,8 +251,10 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	SDL_Rect screen_src = { 0, 0, 1152, 648 };
 	SDL_Rect screen_dest = { 64* cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152* cur_game->display.scale_w, 648 * cur_game->display.scale_h };
 	
-	/* Create a custom texture and render to it */
+	/* Render to custom target and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.char_screen_tex);
+	SDL_SetRenderDrawColor(cur_game->display.renderer, 16, 16, 16, 255);
+	SDL_RenderClear(cur_game->display.renderer);
 	/* Point to elements of interest */
 	point_to_stats(cur_user);
 	/* Draw outline */
@@ -271,6 +276,12 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 			draw_sentence_xlimited(cur_game, char_screen_stats[i].rect.x, char_screen_stats[i].rect.y, char_screen_stats[i].line, char_screen_stats[i].scale, 1152);
 		}
 	}
+	/* Draw icons */
+	draw_stats(cur_game);
+	draw_gear(cur_game);
+	draw_inv(cur_game);
+	draw_sys(cur_game);
+
 	/* Switch to rendering target and output current output */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	SDL_RenderClear(cur_game->display.renderer);
@@ -287,6 +298,81 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 }
 
 static void
+draw_stats(struct game *cur_game)
+{
+	/* Minor stats */
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 83, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 83, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 109, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 109, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 135, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 135, 25, 25, 255, SDL_FALSE);
+	/* Minor stats */
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 222, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 222, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 248, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 248, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 274, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 274, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 300, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 300, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 326, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 326, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 352, 25, 25, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 352, 25, 25, 255, SDL_FALSE);
+}
+
+static void
+draw_gear(struct game *cur_game)
+{
+	draw_sprites(cur_game, cur_game->sprites.icons, 8, 25, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 9, 145, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 10, 265, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 11, 25, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 11, 145, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 11, 265, 529, 100, 100, 255, SDL_FALSE);
+}
+
+static void
+draw_inv(struct game *cur_game)
+{
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 408, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 528, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 648, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 768, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 408, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 528, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 648, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 12, 768, 529, 100, 100, 255, SDL_FALSE);
+}
+
+static void
+draw_sys(struct game *cur_game)
+{
+	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE);
+}
+
+static void
 char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y)
 {
 }
+
+static void
+rando_name(char *name)
+{
+	char *consonants[] = { "b", "bl", "c", "cl", "cr", "d", "fl", "fr", "g", "gl",
+			       "gr", "h", "kl", "kr", "l", "ll", "m", "p", "pl",
+			       "pr", "s", "sl", "st", "t", "tr", "v", "w", "wr", "z", "zh" };
+	char *vowels[] = { "ae", "ai", "an", "ay", "e", "ee", "en", "i", "o", "on", "oo", "ou", "u", "y" };
+	int i;
+	
+	name[0] = '\0';
+	for (i = 0; i < rand_num(2, 4); i++) {
+		strncat(name, consonants[rand_num(0, 29)], 2);
+		strncat(name, vowels[rand_num(0, 13)], 2);
+	}
+	name[0] -= 32;
+}	

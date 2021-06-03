@@ -8,8 +8,9 @@
 #include "wall.h"
 
 /* Function prototypes */
-static void	load_sprites(struct game *cur_game);
-static void	unload_sprites(struct game *cur_game);
+static void		  load_sprites(struct game *cur_game);
+static SDL_Texture	**load_image(struct game *cur_game, char *file, int num, int w, int h);
+static void		  unload_sprites(struct game *cur_game);
 
 void
 display_init(struct game *cur_game)
@@ -62,12 +63,17 @@ display_quit(struct game *cur_game)
 	cur_game->display.window = NULL;
 }
 
-/* Sprite information */
-int num_walls = 24;
-int sprite_w = 64;
-int sprite_h = 64;
 static void
 load_sprites(struct game *cur_game)
+{
+	cur_game->sprites.walls = load_image(cur_game, "art/walls.bmp", 24, 64, 64);
+	cur_game->sprites.floors = load_image(cur_game, "art/floors.bmp", 3, 300, 230);
+	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 18, 50, 50);
+	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
+}
+
+static SDL_Texture **
+load_image(struct game *cur_game, char *file, int num, int w, int h)
 {
 	int i;
 	SDL_Rect rect;
@@ -76,36 +82,20 @@ load_sprites(struct game *cur_game)
 	SDL_Texture **sprites;
 	
 	/* Load walls: Set up rectangle, load image, and allocate memory */
-	rect.x = 0; rect.y = 0; rect.w = sprite_w; rect.h = sprite_h;
-	image = SDL_LoadBMP("art/walls.bmp");
-	sprites = malloc(sizeof(*sprites) * num_walls);
+	rect.x = 0; rect.y = 0; rect.w = w; rect.h = h;
+	image = SDL_LoadBMP(file);
+	sprites = malloc(sizeof(*sprites) * num);
 	/* Blit each sprite and convert to a texture */
-	for (i = 0; i < num_walls; i++) {
-		tmp = SDL_CreateRGBSurface(0, sprite_w, sprite_h, 24, 0, 0, 0, 0);
+	for (i = 0; i < num; i++) {
+		tmp = SDL_CreateRGBSurface(0, w, h, 24, 0, 0, 0, 0);
 		SDL_SetColorKey(tmp, 1, 0xFF00FF);
-		rect.x = i * sprite_w;
+		rect.x = i * w;
 		SDL_BlitSurface(image, &rect, tmp, NULL);
 		*(sprites + i) = SDL_CreateTextureFromSurface(cur_game->display.renderer, tmp);
 		SDL_FreeSurface(tmp);
 	}
 	SDL_FreeSurface(image);
-	cur_game->sprites.walls = sprites;
-	/* Load arrows: Set up rectangle, load image, and allocate memory */
-	rect.x = 0; rect.y = 0; rect.w = 16; rect.h = 16;
-	image = SDL_LoadBMP("art/arrows.bmp");
-	sprites = malloc(sizeof(*sprites) * 4);
-	/* Blit each sprite and convert to a texture */
-	for (i = 0; i < 4; i++) {
-		tmp = SDL_CreateRGBSurface(0, 16, 16, 24, 0, 0, 0, 0);
-		SDL_SetColorKey(tmp, 1, 0xFF00FF);
-		rect.x = i * 16;
-		SDL_BlitSurface(image, &rect, tmp, NULL);
-		*(sprites + i) = SDL_CreateTextureFromSurface(cur_game->display.renderer, tmp);
-		SDL_FreeSurface(tmp);
-	}
-	SDL_FreeSurface(image);
-	cur_game->sprites.arrows = sprites;
-
+	return sprites;
 }
 
 static void
@@ -114,12 +104,22 @@ unload_sprites(struct game *cur_game)
 	int i;
 	
 	/* Unload walls */
-	for (i = 0; i < num_walls; i++) {
+	for (i = 0; i < 24; i++) {
 		SDL_DestroyTexture(*(cur_game->sprites.walls + i));
 	}
 	free(cur_game->sprites.walls);
+	/* Unload floors */
+	for (i = 0; i < 3; i++) {
+		SDL_DestroyTexture(*(cur_game->sprites.floors + i));
+	}
+	free(cur_game->sprites.floors);
+	/* Unload icons */
+	for (i = 0; i < 18; i++) {
+		SDL_DestroyTexture(*(cur_game->sprites.icons + i));
+	}
+	free(cur_game->sprites.icons);
 	/* Unload arrows */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < 6; i++) {
 		SDL_DestroyTexture(*(cur_game->sprites.arrows + i));
 	}
 	free(cur_game->sprites.arrows);

@@ -20,6 +20,8 @@ struct game {
 	} display;
 	struct sprites {
 		SDL_Texture **walls;
+		SDL_Texture **floors;
+		SDL_Texture **icons;
 		SDL_Texture **arrows;
 		SDL_Texture **font;
 	} sprites;

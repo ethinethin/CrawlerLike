@@ -179,10 +179,7 @@ static void
 draw_title(struct game *cur_game, SDL_bool save_exists)
 {
 	/* If no save game exists, get rid of the Continue option */
-	if (save_exists == SDL_FALSE) {
-		title_menu[2].sentence = "";
-	}
-	/* Prep the menu and draw */
+	if (save_exists == SDL_FALSE) title_menu[2].sentence = "";
 	prep_menu_items(title_menu);
 	draw_menu(cur_game, title_menu);
 }
@@ -192,46 +189,48 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 {
 	int results;
 	
-	/* Find click results */
 	results = click_menu(cur_game, title_menu, x, y);
-	/* Act on the results */
-	if (title_menu[results].results == TITLE_BACK) {
-		*whichscreen = GAMESCREEN;
-	} else if (title_menu[results].results == TITLE_NEW) {
-		/* New Game */
-		if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
-			*whichscreen = NEWGAME;
-		} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
-			if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?") == SDL_TRUE) {
-				*whichscreen = NEWGAME;
-				return;
-			}
-		} else if (cur_game->state == LOADED) {
-			if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?") == SDL_TRUE) {
-				*whichscreen = NEWGAME;
-				return;
-			}
-		}
-	} else if (title_menu[results].results == TITLE_LOAD && cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
-		/* Clicking Continue Game */
-		*whichscreen = GAMESCREEN;
-		load_all(cur_game, cur_user);
-	} else if (title_menu[results].results == TITLE_OPTS) {
-		/* Clicking Options */
-		*whichscreen = OPTIONS;
-	} else if (title_menu[results].results == TITLE_EXIT) {
-		/* Clicking Exit or Save and Exit */
-		if (cur_game->state == UNLOADED) {
-			cur_game->running = SDL_FALSE;
+	switch(title_menu[results].results) {
+		case TITLE_BACK:
 			*whichscreen = GAMESCREEN;
-		} else if (cur_game->state == LOADED) {
-			if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?") == SDL_TRUE) {
-				save_all(cur_game, cur_user);
-				cur_game->running = SDL_FALSE;
-				exit_game(cur_game, cur_user);
-				*whichscreen = GAMESCREEN;
+			break;
+		case TITLE_NEW:
+			if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
+				*whichscreen = NEWGAME;
+			} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
+				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?") == SDL_TRUE) {
+					*whichscreen = NEWGAME;
+					return;
+				}
+			} else if (cur_game->state == LOADED) {
+				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?") == SDL_TRUE) {
+					*whichscreen = NEWGAME;
+					return;
+				}
 			}
-		}
+			break;
+		case TITLE_LOAD:
+			if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
+				*whichscreen = GAMESCREEN;
+				load_all(cur_game, cur_user);
+			}
+			break;
+		case TITLE_OPTS:
+			*whichscreen = OPTIONS;
+			break;
+		case TITLE_EXIT:
+			if (cur_game->state == UNLOADED) {
+				cur_game->running = SDL_FALSE;
+				*whichscreen = GAMESCREEN;
+			} else if (cur_game->state == LOADED) {
+				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?") == SDL_TRUE) {
+					save_all(cur_game, cur_user);
+					cur_game->running = SDL_FALSE;
+					exit_game(cur_game, cur_user);
+					*whichscreen = GAMESCREEN;
+				}
+			}
+			break;
 	}
 }
 
@@ -249,7 +248,6 @@ struct menu_item new_menu[] = {
 static void
 draw_new(struct game *cur_game)
 {
-	/* Prep the menu and draw */
 	prep_menu_items(new_menu);
 	draw_menu(cur_game, new_menu);
 }
@@ -260,27 +258,28 @@ new_click(struct game *cur_game, struct user *cur_user, int *whichscreen, int x,
 	int levels;
 	int results;
 	
-	/* Find click results */
 	results = click_menu(cur_game, new_menu, x, y);
-	/* Act on the results */
-	levels = 0;
-	if (new_menu[results].results == NEW_BACK) {
-		*whichscreen = TITLE;
-	} else if (new_menu[results].results == NEW_EASY) {
-		levels = 25;
-	} else if (new_menu[results].results == NEW_NORMAL) {
-		levels = 50;
-	} else if (new_menu[results].results == NEW_HARD) {
-		levels = 100;
-	} else if (new_menu[results].results == NEW_ENDLESS) {
-		levels = 101;
+	switch(new_menu[results].results) {
+		case NEW_EASY:
+			levels = 25;
+			break;
+		case NEW_NORMAL:
+			levels = 50;
+			break;
+		case NEW_HARD:
+			levels = 100;
+			break;
+		case NEW_ENDLESS:
+			levels = 101;
+			break;
+		case NEW_BACK:
+			*whichscreen = TITLE;
+		default: /* Fall through */
+			return;
 	}
-	/* See if they picked a difficulty and set up a game */
-	if (levels != 0) {
-		if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
-		new_game(cur_game, cur_user, levels, 16, 16);
-		*whichscreen = GAMESCREEN;
-	}
+	if (cur_game->state == LOADED) exit_game(cur_game, cur_user);
+	new_game(cur_game, cur_user, levels, 16, 16);
+	*whichscreen = GAMESCREEN;
 }
 
 static void

@@ -55,9 +55,9 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 					draw_rect(cur_game, x + x_coord * 20 - 1, y + y_coord * 20 + 1, 3, 19, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i][j] == START) {
-					draw_rect(cur_game, x + x_coord * 20 + 5, y + y_coord * 20 + 5, 10, 10, SDL_TRUE, "white");
+					draw_sprites(cur_game, cur_game->sprites.arrows, 4, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
 				} else if (cur_game->maps[map_num].tiles[i][j] == END) {
-					draw_rect(cur_game, x + x_coord * 20 + 7, y + y_coord * 20 + 7, 6, 6, SDL_TRUE, "white");
+					draw_sprites(cur_game, cur_game->sprites.arrows, 5, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
 				}
 			} else {
 				/* Draw a small white square if the room has not been seen */
@@ -237,8 +237,9 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	/* Output to view texture and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.view);
 	SDL_RenderClear(cur_game->display.renderer);
-	/* Draw black background */
+	/* Draw background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");
+	draw_sprites(cur_game, cur_game->sprites.floors, cur_game->maps[cur_user->map].sprite, 342, 11, 927, 698, 255, SDL_FALSE);
 	/* Determine values for all walls depending on user facing */
 	set_walls(cur_user, walls);
 	/* Make sure the wall checks are within the map range */

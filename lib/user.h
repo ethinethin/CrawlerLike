@@ -19,21 +19,23 @@ struct seen {
 	int **tiles;
 };
 
+struct stats {
+	int life;
+	int stamina;
+	int magic;
+	int experience;
+	int attack;
+	int defense;
+	int dodge;
+	int power;
+	int spirit;
+	int avoid;
+};
+
 struct character {
 	char *name;
 	int level;
-	struct stats {
-		int life;
-		int stamina;
-		int magic;
-		int experience;
-		int attack;
-		int defense;
-		int dodge;
-		int power;
-		int spirit;
-		int avoid;
-	} cur_stats;
+	struct stats cur_stats;
 	struct stats max_stats;
 	int money;
 	void *inventory[8];

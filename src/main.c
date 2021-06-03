@@ -24,6 +24,8 @@ struct game GAME = {
 	  SDL_FALSE,	/* display.vsync */
 	  2 },		/* display.mode */
 	{ NULL,		/* sprites.walls */
+	  NULL,		/* sprites.floors */
+	  NULL,		/* sprites.icons */
 	  NULL,		/* sprites.arrows */
 	  NULL },	/* sprites.font */
 	UNLOADED,	/* state */
