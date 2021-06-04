@@ -85,9 +85,6 @@ title(struct game *cur_game, struct user *cur_user)
 					if (whichscreen == TITLE && cur_game->state == LOADED) loop = SDL_FALSE;
 					else whichscreen = TITLE;
 					break;
-				case SDLK_c:
-					char_screen(cur_game, cur_user, SDL_FALSE);
-					break;
 			}
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			redraw = SDL_TRUE;
@@ -100,7 +97,7 @@ title(struct game *cur_game, struct user *cur_user)
 			else if (whichscreen == NEWGAME) new_click(cur_game, cur_user, &whichscreen, x, y);
 		}
 		/* if you're staying in the loop, draw appropriate screen */
-		if (redraw == SDL_TRUE && loop == SDL_TRUE) {
+		if (redraw == SDL_TRUE && loop == SDL_TRUE && whichscreen != GAMESCREEN) {
 			render_clear(cur_game, "darkblue");
 			if (whichscreen == TITLE) draw_title(cur_game, info.exists);
 			else if (whichscreen == OPTIONS) draw_options(cur_game);
@@ -503,7 +500,7 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	/* Figure out map sizes needed for given dimensions */
 	map_dim_row = map_dim_row * 2 + 1;
 	map_dim_col = map_dim_col * 2 + 1;
-	/* Initialize all maps and seem with end of previous map as start */
+	/* Initialize all maps and seen with end of previous map as start */
 	for (i = 0; i < num_maps; i++) {
 		init_map(&cur_game->maps[i], map_dim_row, map_dim_col);
 		init_seen(&cur_user->seen[i], map_dim_row, map_dim_col);
@@ -517,10 +514,13 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 			populate_map(&cur_game->maps[i], cur_game->maps[i - 1].end.row, cur_game->maps[i - 1].end.col);
 		}
 	}
+	/* Initialize the new character */
+	init_char(cur_game, cur_user);
 	/* Update starting square as seen */
 	update_seen(cur_user);
 	/* Game is now loaded and running */
 	cur_game->state = LOADED;
+	
 }
 
 static void
@@ -530,6 +530,9 @@ exit_game(struct game *cur_game, struct user *cur_user)
 	/* This might get called before a game is loaded, so just ignore it */
 	if (cur_game->state == UNLOADED) return;
 	
+	/* Destroy the character */
+	kill_char(cur_user);
+	/* Kill the map and seen */
 	for (i = 0; i < cur_game->num_maps; i++) {
 		kill_map(&cur_game->maps[i]);
 		kill_seen(&cur_user->seen[i]);

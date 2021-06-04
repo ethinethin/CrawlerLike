@@ -58,16 +58,18 @@ main()
 	
 	/* If the game is running after title screen, output the view for the first time */
 	if (cur_game->running == SDL_TRUE) {
+		update_seen(cur_user);
 		render_clear(cur_game, "darkred");
 		draw_view(cur_game, cur_user);
 		draw_screen(cur_game, cur_user);
 		render_present(cur_game, SDL_TRUE);
+		redraw = SDL_FALSE;
 	}
+	
 	/* Enter main game loop */
 	while (cur_game->running == SDL_TRUE) {
-		/* draw map, player, and render */
+		/* Delay 10 ms and poll for event */
 		SDL_Delay(10);
-		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
 			title(cur_game, cur_user);

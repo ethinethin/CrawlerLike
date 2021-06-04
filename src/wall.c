@@ -236,6 +236,7 @@ draw_view(struct game *cur_game, struct user *cur_user)
 
 	/* Output to view texture and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.view);
+	SDL_SetRenderDrawColor(cur_game->display.renderer, 0, 0, 0, 255);
 	SDL_RenderClear(cur_game->display.renderer);
 	/* Draw background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");

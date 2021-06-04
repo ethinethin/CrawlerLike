@@ -6,14 +6,16 @@
 #include "user.h"
 
 /* Function prototypes */
+static void	name_char(struct game *cur_game, struct user *cur_user);
+static void	draw_name(struct game *cur_game, char buffer[18]);
 static void	point_to_stats(struct user *cur_user);
 static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
 static void	draw_stats(struct game *cur_game);
 static void	draw_gear(struct game *cur_game);
 static void	draw_inv(struct game *cur_game);
-static void	draw_sys(struct game *cur_game);
+static void	draw_sys(struct game *cur_game, struct user *cur_user);
 static void	char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y);
-static void	rando_name(char *name);
+static void	rando_name(char name[18]);
 
 void
 init_seen(struct seen *cur_seen, int rows, int cols)
@@ -52,34 +54,41 @@ update_seen(struct user *cur_user)
 }
 
 void
-init_char(struct user *cur_user)
+init_char(struct game *cur_game, struct user *cur_user)
 {
-	/* Make a fake character */
+	/* Make a new character with default stats */
 	cur_user->character = malloc(sizeof(*cur_user->character));
 	cur_user->character->name = malloc(sizeof(*cur_user->character->name)*17);
-	rando_name(cur_user->character->name);
-	cur_user->character->level = rand_num(1, 999);
+	name_char(cur_game, cur_user);
+	cur_user->character->level = 1;
+	cur_user->character->major_points = 5;
+	cur_user->character->minor_points = 10;
+	/* Allocate 10 to each major stat */
 	cur_user->character->cur_stats.life = 10;
 	cur_user->character->cur_stats.stamina = 10;
 	cur_user->character->cur_stats.magic = 10;
 	cur_user->character->cur_stats.experience = 0;
+	/* Allocate 10 to each minor stat */
 	cur_user->character->cur_stats.attack = 10;
 	cur_user->character->cur_stats.defense = 10;
 	cur_user->character->cur_stats.dodge = 10;
 	cur_user->character->cur_stats.power = 10;
 	cur_user->character->cur_stats.spirit = 10;
 	cur_user->character->cur_stats.avoid = 10;
+	/* Allocate 10 to each major stat */
 	cur_user->character->max_stats.life = 10;
 	cur_user->character->max_stats.stamina = 10;
 	cur_user->character->max_stats.magic = 10;
 	cur_user->character->max_stats.experience = 100;
+	/* Allocate 10 to each minor stat */
 	cur_user->character->max_stats.attack = 10;
 	cur_user->character->max_stats.defense = 10;
 	cur_user->character->max_stats.dodge = 10;
 	cur_user->character->max_stats.power = 10;
 	cur_user->character->max_stats.spirit = 10;
 	cur_user->character->max_stats.avoid = 10;
-	cur_user->character->money = 1000;
+	/* Start with 100 money */
+	cur_user->character->money = 100;
 }
 
 void
@@ -87,6 +96,138 @@ kill_char(struct user *cur_user)
 {
 	free(cur_user->character->name);
 	free(cur_user->character);
+}
+
+static void
+name_char(struct game *cur_game, struct user *cur_user)
+{
+	char buffer[18];
+	char symbols[] = { ')', '!', '@', '#', '$', '%', '^', '&', '*', '(' };
+	char letter;
+	int cursor;
+	int key;
+	int x, y;
+	SDL_bool loop;
+	SDL_bool redraw;
+	SDL_bool shift;
+	SDL_Event event;
+	
+	/* Enter input loop */
+	buffer[0] = '|'; buffer[1] = '\0';
+	cursor = 0;
+	/* draw screen */
+	render_clear(cur_game, "darkred");
+	draw_name(cur_game, buffer);
+	render_present(cur_game, SDL_FALSE);
+	/* enter input loop */
+	redraw = SDL_FALSE;
+	shift = SDL_FALSE;
+	loop = SDL_TRUE;
+	while (loop == SDL_TRUE) {
+		SDL_Delay(10);
+		if (SDL_PollEvent(&event) == 0) continue;
+		switch (event.type) {
+			case SDL_QUIT:
+				exit(1);
+				break;
+			case SDL_KEYDOWN:
+				key = event.key.keysym.sym;
+				/* If holding shift */
+				if (key == SDLK_LSHIFT || key == SDLK_RSHIFT) {
+					shift = SDL_TRUE;
+				} else if (key == SDLK_BACKSPACE && cursor > 0) {
+					buffer[cursor - 1] = '|';
+					buffer[cursor] = '\0';
+					cursor--;
+				} else if (key >= 'a' && key <= 'z' && cursor < 15) {
+					if (shift == SDL_TRUE) {
+						letter = key - 32;
+					} else {
+						letter = key;
+					}
+					buffer[cursor] = letter;
+					buffer[cursor + 1] = '|';
+					buffer[cursor + 2] = '\0';
+					cursor++;
+				} else if (key >= '0' && key <= '9' && cursor < 15) {
+					if (shift == SDL_TRUE) {
+						key = key - 48;
+						key = symbols[key];
+					}
+					buffer[cursor] = key;
+					buffer[cursor + 1] = '|';
+					buffer[cursor + 2] = '\0';
+					cursor++;
+				} else if (key >= 32 && key <= 126 && cursor < 15) {
+					if (shift == SDL_TRUE) {
+						if (key == '\'') key = '"';
+						else if (key == ';') key = ':';
+						else if (key == ',') key = '<';
+						else if (key == '=') key = '+';
+						else if (key == '.') key = '>';
+						else if (key == '/') key = '?';
+						else if (key == '-') key = '_';
+						else if (key == '`') key = '~';
+						else if (key == '[') key = '{';
+						else if (key == '\\') key = '|';
+						else if (key == ']') key = '}';
+					}
+					buffer[cursor] = key;
+					buffer[cursor + 1] = '|';
+					buffer[cursor + 2] = '\0';
+					cursor++;
+				} else if (key == SDLK_RETURN && cursor > 0) {
+					loop = SDL_FALSE;
+				}
+				redraw = SDL_TRUE;
+				break;
+			case SDL_KEYUP:
+				if (event.key.keysym.sym == SDLK_LSHIFT || event.key.keysym.sym == SDLK_RSHIFT) {
+					shift = SDL_FALSE;
+				}
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				if (event.button.button == SDL_BUTTON_LEFT) {
+					/* respond to the mouse click */
+					x = event.button.x / cur_game->display.scale_w;
+					y = event.button.y / cur_game->display.scale_h;
+					if (x >= 785 && x <= 835 && y >= 376 && y <= 426) {
+						if (cursor > 0) {
+							loop = SDL_FALSE;
+						}
+					} else if (x >= 730 && x <= 780 && y >= 376 && y <= 426) {
+						rando_name(buffer);
+						cursor = strnlen(buffer, 18);
+						buffer[cursor] = '|';
+					}
+				}
+				redraw = SDL_TRUE;
+				break;
+			default:
+				break;
+		}
+		if (redraw == SDL_TRUE) {
+			render_clear(cur_game, "darkred");
+			draw_name(cur_game, buffer);
+			render_present(cur_game, SDL_FALSE);
+			redraw = SDL_FALSE;
+		}
+	}
+	/* Copy the name to the character */
+	buffer[cursor] = '\0';
+	strncpy(cur_user->character->name, buffer, strnlen(buffer, 16) + 1);
+}
+
+static void
+draw_name(struct game *cur_game, char buffer[18])
+{
+	draw_sentence(cur_game, 10, 10, "Name Your Character", 0.25);
+	draw_sentence(cur_game, 429, 349, "Name: ", 0.1);
+	draw_rect(cur_game, 523, 345, 310, 26, SDL_TRUE, "black");
+	draw_rect(cur_game, 523, 345, 310, 26, SDL_FALSE, "white");
+	draw_sentence(cur_game, 526, 349, buffer, 0.1);
+	draw_sprites(cur_game, cur_game->sprites.icons, 6, 785, 376, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 13, 730, 376, 50, 50, 255, SDL_FALSE);
 }
 
 SDL_bool
@@ -141,7 +282,6 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	SDL_Event event;
 	
 	/* Make a fake character and draw the screen */
-	init_char(cur_user);
 	draw_char_screen(cur_game, cur_user, ingame);
 	
 	/* Input loop */
@@ -159,9 +299,6 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 		/* Only output the screen if the user gave input */
 		draw_char_screen(cur_game, cur_user, ingame);
 	}
-	
-	/* Kill fake character */
-	kill_char(cur_user);
 }
 
 enum type { TYPE_RECT, TYPE_TEXT, TYPE_ICON };
@@ -280,7 +417,7 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	draw_stats(cur_game);
 	draw_gear(cur_game);
 	draw_inv(cur_game);
-	draw_sys(cur_game);
+	draw_sys(cur_game, cur_user);
 
 	/* Switch to rendering target and output current output */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
@@ -347,9 +484,12 @@ draw_inv(struct game *cur_game)
 }
 
 static void
-draw_sys(struct game *cur_game)
+draw_sys(struct game *cur_game, struct user *cur_user)
 {
+	char money[6];
 	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE);
+	sprintf(money, "%4d", cur_user->character->money);
+	draw_sentence(cur_game, 908, 487, money, 0.15);
 	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE);
@@ -361,7 +501,7 @@ char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y)
 }
 
 static void
-rando_name(char *name)
+rando_name(char name[18])
 {
 	char *consonants[] = { "b", "bl", "c", "cl", "cr", "d", "fl", "fr", "g", "gl",
 			       "gr", "h", "kl", "kr", "l", "ll", "m", "p", "pl",
@@ -369,10 +509,13 @@ rando_name(char *name)
 	char *vowels[] = { "ae", "ai", "an", "ay", "e", "ee", "en", "i", "o", "on", "oo", "ou", "u", "y" };
 	int i;
 	
-	name[0] = '\0';
+	/* Empty out the string */
+	for (i = 0; i < 18; i++) name[i] = '\0';
+	/* Add random syllables */
 	for (i = 0; i < rand_num(2, 4); i++) {
 		strncat(name, consonants[rand_num(0, 29)], 2);
 		strncat(name, vowels[rand_num(0, 13)], 2);
 	}
+	/* Make first letter uppercase */
 	name[0] -= 32;
 }	

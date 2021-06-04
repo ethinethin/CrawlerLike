@@ -16,6 +16,8 @@ static void	save_map(struct game *cur_game);
 static void	load_map(struct game *cur_game);
 static void	save_player(struct user *cur_user);
 static void	load_player(struct user *cur_user);
+static void	save_char(struct user *cur_user);
+static void	load_char(struct user *cur_user);
 
 SDL_bool checked_directories = SDL_FALSE;
 static void
@@ -123,6 +125,7 @@ save_all(struct game *cur_game, struct user *cur_user)
 	save_info(cur_game, cur_user);
 	save_map(cur_game);
 	save_player(cur_user);
+	save_char(cur_user);
 }
 
 void
@@ -130,6 +133,7 @@ load_all(struct game *cur_game, struct user *cur_user)
 {
 	load_map(cur_game);
 	load_player(cur_user);
+	load_char(cur_user);
 	cur_game->state = LOADED;
 }
 
@@ -246,5 +250,62 @@ load_player(struct user *cur_user)
 		}
 		fscanf(fp, "\n", NULL);
 	}
+	fclose(fp);
+}
+
+static void
+save_char(struct user *cur_user)
+{
+	char filename[20] = "save/char.txt";
+	FILE *fp;
+	
+	fp = fopen(filename, "w");
+	/* Output character parameters */
+	fprintf(fp, "name=%s\n", cur_user->character->name);
+	fprintf(fp, "level=%d\n", cur_user->character->level);
+	fprintf(fp, "money=%d\n", cur_user->character->money);
+	fprintf(fp, "major_points=%d\n", cur_user->character->major_points);
+	fprintf(fp, "minor_points=%d\n", cur_user->character->minor_points);
+	/* Stats */
+	fprintf(fp, "stats_0=%d,%d\n", cur_user->character->cur_stats.life, cur_user->character->max_stats.life);
+	fprintf(fp, "stats_1=%d,%d\n", cur_user->character->cur_stats.stamina, cur_user->character->max_stats.stamina);
+	fprintf(fp, "stats_2=%d,%d\n", cur_user->character->cur_stats.magic, cur_user->character->max_stats.magic);
+	fprintf(fp, "stats_3=%d,%d\n", cur_user->character->cur_stats.experience, cur_user->character->max_stats.experience);
+	fprintf(fp, "stats_4=%d,%d\n", cur_user->character->cur_stats.attack, cur_user->character->max_stats.attack);
+	fprintf(fp, "stats_5=%d,%d\n", cur_user->character->cur_stats.defense, cur_user->character->max_stats.defense);
+	fprintf(fp, "stats_6=%d,%d\n", cur_user->character->cur_stats.dodge, cur_user->character->max_stats.dodge);
+	fprintf(fp, "stats_7=%d,%d\n", cur_user->character->cur_stats.power, cur_user->character->max_stats.power);
+	fprintf(fp, "stats_8=%d,%d\n", cur_user->character->cur_stats.spirit, cur_user->character->max_stats.spirit);
+	fprintf(fp, "stats_9=%d,%d\n", cur_user->character->cur_stats.avoid, cur_user->character->max_stats.avoid);
+	fclose(fp);
+}
+
+static void
+load_char(struct user *cur_user)
+{
+	char filename[20] = "save/char.txt";
+	FILE *fp;
+	
+	/* Allocate memory */
+	cur_user->character = malloc(sizeof(*cur_user->character));
+	cur_user->character->name = malloc(sizeof(*cur_user->character->name)*17);
+	/* Open and load character parameters */
+	fp = fopen(filename, "r");
+	fscanf(fp, "name=%[^\n]%*c", cur_user->character->name);
+	fscanf(fp, "level=%d\n", &cur_user->character->level);
+	fscanf(fp, "money=%d\n", &cur_user->character->money);
+	fscanf(fp, "major_points=%d\n", &cur_user->character->major_points);
+	fscanf(fp, "minor_points=%d\n", &cur_user->character->minor_points);
+	/* Stats */
+	fscanf(fp, "stats_0=%d,%d\n", &cur_user->character->cur_stats.life, &cur_user->character->max_stats.life);
+	fscanf(fp, "stats_1=%d,%d\n", &cur_user->character->cur_stats.stamina, &cur_user->character->max_stats.stamina);
+	fscanf(fp, "stats_2=%d,%d\n", &cur_user->character->cur_stats.magic, &cur_user->character->max_stats.magic);
+	fscanf(fp, "stats_3=%d,%d\n", &cur_user->character->cur_stats.experience, &cur_user->character->max_stats.experience);
+	fscanf(fp, "stats_4=%d,%d\n", &cur_user->character->cur_stats.attack, &cur_user->character->max_stats.attack);
+	fscanf(fp, "stats_5=%d,%d\n", &cur_user->character->cur_stats.defense, &cur_user->character->max_stats.defense);
+	fscanf(fp, "stats_6=%d,%d\n", &cur_user->character->cur_stats.dodge, &cur_user->character->max_stats.dodge);
+	fscanf(fp, "stats_7=%d,%d\n", &cur_user->character->cur_stats.power, &cur_user->character->max_stats.power);
+	fscanf(fp, "stats_8=%d,%d\n", &cur_user->character->cur_stats.spirit, &cur_user->character->max_stats.spirit);
+	fscanf(fp, "stats_9=%d,%d\n", &cur_user->character->cur_stats.avoid, &cur_user->character->max_stats.avoid);
 	fclose(fp);
 }

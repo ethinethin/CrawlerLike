@@ -148,6 +148,7 @@ render_present(struct game *cur_game, SDL_bool ingame)
 	/* Reset render target to the renderer */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	/* Clear the renderer */
+	SDL_SetRenderDrawColor(cur_game->display.renderer, 0, 0, 0, 255);
 	SDL_RenderClear(cur_game->display.renderer);
 	/* Copy the output texture to the renderer */
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &src, &dest);
