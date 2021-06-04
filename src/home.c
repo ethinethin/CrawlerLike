@@ -54,7 +54,7 @@ title(struct game *cur_game, struct user *cur_user)
 
 	whichscreen = TITLE;
 	/* Draw the title screen */
-	render_clear(cur_game, "darkblue");
+	render_clear(cur_game, "lightblue");
 	draw_title(cur_game, info.exists);
 	render_present(cur_game, SDL_FALSE);
 	redraw = SDL_FALSE;
@@ -98,7 +98,7 @@ title(struct game *cur_game, struct user *cur_user)
 		}
 		/* if you're staying in the loop, draw appropriate screen */
 		if (redraw == SDL_TRUE && loop == SDL_TRUE && whichscreen != GAMESCREEN) {
-			render_clear(cur_game, "darkblue");
+			render_clear(cur_game, "lightblue");
 			if (whichscreen == TITLE) draw_title(cur_game, info.exists);
 			else if (whichscreen == OPTIONS) draw_options(cur_game);
 			else if (whichscreen == NEWGAME) draw_new(cur_game);

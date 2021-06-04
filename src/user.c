@@ -113,7 +113,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 	SDL_Event event;
 	
 	/* Enter input loop */
-	buffer[0] = '|'; buffer[1] = '\0';
+	buffer[0] = '_'; buffer[1] = '\0';
 	cursor = 0;
 	/* draw screen */
 	render_clear(cur_game, "darkred");
@@ -136,7 +136,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 				if (key == SDLK_LSHIFT || key == SDLK_RSHIFT) {
 					shift = SDL_TRUE;
 				} else if (key == SDLK_BACKSPACE && cursor > 0) {
-					buffer[cursor - 1] = '|';
+					buffer[cursor - 1] = '_';
 					buffer[cursor] = '\0';
 					cursor--;
 				} else if (key >= 'a' && key <= 'z' && cursor < 15) {
@@ -146,7 +146,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 						letter = key;
 					}
 					buffer[cursor] = letter;
-					buffer[cursor + 1] = '|';
+					buffer[cursor + 1] = '_';
 					buffer[cursor + 2] = '\0';
 					cursor++;
 				} else if (key >= '0' && key <= '9' && cursor < 15) {
@@ -155,7 +155,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 						key = symbols[key];
 					}
 					buffer[cursor] = key;
-					buffer[cursor + 1] = '|';
+					buffer[cursor + 1] = '_';
 					buffer[cursor + 2] = '\0';
 					cursor++;
 				} else if (key >= 32 && key <= 126 && cursor < 15) {
@@ -173,7 +173,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 						else if (key == ']') key = '}';
 					}
 					buffer[cursor] = key;
-					buffer[cursor + 1] = '|';
+					buffer[cursor + 1] = '_';
 					buffer[cursor + 2] = '\0';
 					cursor++;
 				} else if (key == SDLK_RETURN && cursor > 0) {
@@ -198,7 +198,7 @@ name_char(struct game *cur_game, struct user *cur_user)
 					} else if (x >= 730 && x <= 780 && y >= 376 && y <= 426) {
 						rando_name(buffer);
 						cursor = strnlen(buffer, 18);
-						buffer[cursor] = '|';
+						buffer[cursor] = '_';
 					}
 				}
 				redraw = SDL_TRUE;
@@ -488,8 +488,8 @@ draw_sys(struct game *cur_game, struct user *cur_user)
 {
 	char money[6];
 	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE);
-	sprintf(money, "%4d", cur_user->character->money);
-	draw_sentence(cur_game, 908, 487, money, 0.15);
+	sprintf(money, "%5d", cur_user->character->money);
+	draw_sentence(cur_game, 911, 494, money, 0.1);
 	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE);
