@@ -30,7 +30,6 @@ static void		new_click(struct game *cur_game, struct user *cur_user, int *whichs
 static void		draw_options(struct game *cur_game);
 static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
-static SDL_bool		yes_no(struct game *cur_game, char *message);
 static void		draw_yesno(struct game *cur_game, char *message);
 static int		yesno_click(int x, int y);
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
@@ -400,7 +399,7 @@ change_resolution(struct game *cur_game, int w, int h)
 	}
 }
 
-static SDL_bool
+SDL_bool
 yes_no(struct game *cur_game, char *message)
 {
 	SDL_Event event;

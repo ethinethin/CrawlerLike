@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "draw.h"
 #include "font.h"
+#include "home.h"
 #include "main.h"
 #include "rand.h"
 #include "user.h"
@@ -8,13 +9,17 @@
 /* Function prototypes */
 static void	name_char(struct game *cur_game, struct user *cur_user);
 static void	draw_name(struct game *cur_game, char buffer[18]);
-static void	point_to_stats(struct user *cur_user);
-static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
-static void	draw_stats(struct game *cur_game);
+static void	zero_stats(struct stats *increase);
+static void	copy_stats(struct stats *src, struct stats *dest);
+static SDL_bool	changes_made(struct user *cur_user, int points[2]);
+static void	point_to_stats(struct user *cur_user, struct stats *temp_stats[3], int points[2]);
+static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, struct stats *temp_stats[3], int points[2]);
+static void	point_to_arrows(struct stats *temp_stats[3]);
+static void	draw_stat_arrows(struct game *cur_game, struct stats *temp_stats[3], int points[2]);
 static void	draw_gear(struct game *cur_game);
 static void	draw_inv(struct game *cur_game);
 static void	draw_sys(struct game *cur_game, struct user *cur_user);
-static void	char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y);
+static void	char_screen_click(int points[2], int x, int y);
 static void	rando_name(char name[18]);
 
 void
@@ -278,26 +283,93 @@ change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user)
 void
 char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 {
+	int points[2];
+	int x, y;
 	SDL_bool loop;
+	SDL_bool changes;
 	SDL_Event event;
+	struct stats increase;
+	struct stats cur_increase;
+	struct stats max_increase;
+	struct stats *temp_stats[3] = { &increase, &cur_increase, &max_increase };
 	
-	/* Make a fake character and draw the screen */
-	draw_char_screen(cur_game, cur_user, ingame);
+	/* Zero out increase and allocate points */
+	zero_stats(&increase);
+	points[0] = cur_user->character->major_points;
+	points[1] = cur_user->character->minor_points;
+	/* Copy character structures */
+	copy_stats(&cur_user->character->cur_stats, &cur_increase);
+	copy_stats(&cur_user->character->max_stats, &max_increase);
+	/* Draw the screen */
+	draw_char_screen(cur_game, cur_user, ingame, temp_stats, points);
 	
 	/* Input loop */
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE) {
 		SDL_Delay(10);
 		if (SDL_PollEvent(&event) == 0) continue;
+		changes = changes_made(cur_user, points);
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_ESCAPE:
-					loop = SDL_FALSE;
+					if (changes == SDL_FALSE ||
+					    yes_no(cur_game, "Finalize character changes?") == SDL_TRUE) {
+						loop = SDL_FALSE;
+					}
 					break;
 			}	
+		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+			/* Respond to mouse click */
+			x = (event.button.x - 64) / cur_game->display.scale_w;
+			y = (event.button.y - 36) / cur_game->display.scale_h;
+			char_screen_click(points, x, y);
 		}
 		/* Only output the screen if the user gave input */
-		draw_char_screen(cur_game, cur_user, ingame);
+		draw_char_screen(cur_game, cur_user, ingame, temp_stats, points);
+	}
+	/* Copy stat changes to the character */
+	copy_stats(&cur_increase, &cur_user->character->cur_stats);
+	copy_stats(&max_increase, &cur_user->character->max_stats);
+	cur_user->character->major_points = points[0];
+	cur_user->character->minor_points = points[1];
+}
+
+static void
+zero_stats(struct stats *increase)
+{
+	increase->life = 0;
+	increase->stamina = 0;
+	increase->magic = 0;
+	increase->attack = 0;
+	increase->defense = 0;
+	increase->dodge = 0;
+	increase->power = 0;
+	increase->spirit = 0;
+	increase->avoid = 0;
+}
+
+static void
+copy_stats(struct stats *src, struct stats *dest)
+{
+	dest->life = src->life;
+	dest->stamina = src->stamina;
+	dest->magic = src->magic;
+	dest->attack = src->attack;
+	dest->defense = src->defense;
+	dest->dodge = src->dodge;
+	dest->power = src->power;
+	dest->spirit = src->spirit;
+	dest->avoid = src->avoid;
+}
+
+static SDL_bool
+changes_made(struct user *cur_user, int points[2])
+{
+	if (cur_user->character->major_points == points[0] &&
+	    cur_user->character->minor_points == points[1]) {
+		return SDL_FALSE;
+	} else {
+		return SDL_TRUE;
 	}
 }
 
@@ -350,34 +422,32 @@ struct char_screen_stats {
 	{ { 648, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
 	{ { 768, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
 	{ { 908, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 1028, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
+	{ { 1028, 419, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL  },
 	{ { 908, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL },
-	{ { 1028, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL }
+	{ { 1028, 529, 100, 100}, TYPE_RECT, 0, NULL, NULL, NULL, NULL  }
 };
 
-int points_1 = 5;
-int points_2 = 10;
 static void
-point_to_stats(struct user *cur_user)
+point_to_stats(struct user *cur_user, struct stats *temp_stats[3], int points[2])
 {
 	/* Have the structure above point to the appropriate variables */
 	char_screen_stats[7].val3 = cur_user->character->name; char_screen_stats[7].val1 = &cur_user->character->level;
-	char_screen_stats[8].val1 = &points_1;
-	char_screen_stats[9].val1 = &cur_user->character->cur_stats.life; char_screen_stats[9].val2 = &cur_user->character->max_stats.life; 
-	char_screen_stats[10].val1 = &cur_user->character->cur_stats.stamina; char_screen_stats[10].val2 = &cur_user->character->max_stats.stamina; 
-	char_screen_stats[11].val1 = &cur_user->character->cur_stats.magic; char_screen_stats[11].val2 = &cur_user->character->max_stats.magic; 
+	char_screen_stats[8].val1 = &points[0];
+	char_screen_stats[9].val1 = &temp_stats[1]->life; char_screen_stats[9].val2 = &temp_stats[2]->life;
+	char_screen_stats[10].val1 = &temp_stats[1]->stamina; char_screen_stats[10].val2 = &temp_stats[2]->stamina;
+	char_screen_stats[11].val1 = &temp_stats[1]->magic; char_screen_stats[11].val2 = &temp_stats[2]->magic;
 	char_screen_stats[12].val1 = &cur_user->character->cur_stats.experience; char_screen_stats[12].val2 = &cur_user->character->max_stats.experience; 
-	char_screen_stats[13].val1 = &points_2;
-	char_screen_stats[14].val1 = &cur_user->character->cur_stats.attack; char_screen_stats[14].val2 = &cur_user->character->max_stats.attack; 
-	char_screen_stats[15].val1 = &cur_user->character->cur_stats.defense; char_screen_stats[15].val2 = &cur_user->character->max_stats.defense; 
-	char_screen_stats[16].val1 = &cur_user->character->cur_stats.dodge; char_screen_stats[16].val2 = &cur_user->character->max_stats.dodge; 
-	char_screen_stats[17].val1 = &cur_user->character->cur_stats.power; char_screen_stats[17].val2 = &cur_user->character->max_stats.power; 
-	char_screen_stats[18].val1 = &cur_user->character->cur_stats.spirit; char_screen_stats[18].val2 = &cur_user->character->max_stats.spirit; 
-	char_screen_stats[19].val1 = &cur_user->character->cur_stats.avoid; char_screen_stats[19].val2 = &cur_user->character->max_stats.avoid; 
+	char_screen_stats[13].val1 = &points[1];
+	char_screen_stats[14].val1 = &temp_stats[1]->attack; char_screen_stats[14].val2 = &temp_stats[2]->attack;
+	char_screen_stats[15].val1 = &temp_stats[1]->defense; char_screen_stats[15].val2 = &temp_stats[2]->defense;
+	char_screen_stats[16].val1 = &temp_stats[1]->dodge; char_screen_stats[16].val2 = &temp_stats[2]->dodge;
+	char_screen_stats[17].val1 = &temp_stats[1]->power; char_screen_stats[17].val2 = &temp_stats[2]->power;
+	char_screen_stats[18].val1 = &temp_stats[1]->spirit; char_screen_stats[18].val2 = &temp_stats[2]->spirit;
+	char_screen_stats[19].val1 = &temp_stats[1]->avoid; char_screen_stats[19].val2 = &temp_stats[2]->avoid;
 }
 
 static void
-draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
+draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, struct stats *temp_stats[3], int points[2])
 {
 	char line[100];
 	int i;
@@ -386,14 +456,14 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	SDL_Rect view_src = { 341, 10, 929, 700 };
 	SDL_Rect view_dest = { 341 * cur_game->display.scale_w, 10 * cur_game->display.scale_h, 929 * cur_game->display.scale_w, 700  * cur_game->display.scale_h };	
 	SDL_Rect screen_src = { 0, 0, 1152, 648 };
-	SDL_Rect screen_dest = { 64* cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152* cur_game->display.scale_w, 648 * cur_game->display.scale_h };
+	SDL_Rect screen_dest = { 64 * cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152* cur_game->display.scale_w, 648 * cur_game->display.scale_h };
 	
 	/* Render to custom target and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.char_screen_tex);
 	SDL_SetRenderDrawColor(cur_game->display.renderer, 16, 16, 16, 255);
 	SDL_RenderClear(cur_game->display.renderer);
 	/* Point to elements of interest */
-	point_to_stats(cur_user);
+	point_to_stats(cur_user, temp_stats, points);
 	/* Draw outline */
 	draw_rect(cur_game, 0, 0, screen_src.w, screen_src.h, SDL_FALSE, "white");
 	/* Display elements from the above structure */
@@ -414,7 +484,7 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 		}
 	}
 	/* Draw icons */
-	draw_stats(cur_game);
+	draw_stat_arrows(cur_game, temp_stats, points);
 	draw_gear(cur_game);
 	draw_inv(cur_game);
 	draw_sys(cur_game, cur_user);
@@ -434,29 +504,88 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	//SDL_DestroyTexture(texture);
 }
 
+enum arrow_type { ARROW_PLUS_MAJOR, ARROW_PLUS_MINOR, ARROW_MINUS_MAJOR, ARROW_MINUS_MINOR, ARROW_NULL };
+struct char_screen_stats arrows[] = {
+	{ { 483, 83, 25, 25 }, ARROW_PLUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 109, 25, 25 }, ARROW_PLUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 135, 25, 25 }, ARROW_PLUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 222, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 248, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 274, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 300, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 326, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 483, 352, 25, 25 }, ARROW_PLUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 83, 25, 25 }, ARROW_MINUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 109, 25, 25 }, ARROW_MINUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 135, 25, 25 }, ARROW_MINUS_MAJOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 222, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 248, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 274, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 300, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 326, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { 509, 352, 25, 25 }, ARROW_MINUS_MINOR, 0, NULL, NULL, NULL, NULL },
+	{ { -1, -1, -1, -1 }, ARROW_NULL, 0, NULL, NULL, NULL, NULL }
+};
+
 static void
-draw_stats(struct game *cur_game)
+point_to_arrows(struct stats *temp_stats[3])
 {
-	/* Minor stats */
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 83, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 83, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 109, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 109, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 135, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 135, 25, 25, 255, SDL_FALSE);
-	/* Minor stats */
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 222, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 222, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 248, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 248, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 274, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 274, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 300, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 300, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 326, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 326, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 0, 483, 352, 25, 25, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 1, 509, 352, 25, 25, 255, SDL_FALSE);
+	arrows[0].val1 = &temp_stats[0]->life;		arrows[9].val1 = &temp_stats[0]->life;
+	arrows[0].val2 = &temp_stats[1]->life;		arrows[9].val2 = &temp_stats[1]->life;
+	arrows[0].val3 = &temp_stats[2]->life;		arrows[9].val3 = &temp_stats[2]->life;
+	arrows[1].val1 = &temp_stats[0]->stamina;	arrows[10].val1 = &temp_stats[0]->stamina;
+	arrows[1].val2 = &temp_stats[1]->stamina;	arrows[10].val2 = &temp_stats[1]->stamina;
+	arrows[1].val3 = &temp_stats[2]->stamina;	arrows[10].val3 = &temp_stats[2]->stamina;
+	arrows[2].val1 = &temp_stats[0]->magic;		arrows[11].val1 = &temp_stats[0]->magic;
+	arrows[2].val2 = &temp_stats[1]->magic;		arrows[11].val2 = &temp_stats[1]->magic;
+	arrows[2].val3 = &temp_stats[2]->magic;		arrows[11].val3 = &temp_stats[2]->magic;
+	arrows[3].val1 = &temp_stats[0]->attack;	arrows[12].val1 = &temp_stats[0]->attack;
+	arrows[3].val2 = &temp_stats[1]->attack;	arrows[12].val2 = &temp_stats[1]->attack;
+	arrows[3].val3 = &temp_stats[2]->attack;	arrows[12].val3 = &temp_stats[2]->attack;
+	arrows[4].val1 = &temp_stats[0]->defense;	arrows[13].val1 = &temp_stats[0]->defense;
+	arrows[4].val2 = &temp_stats[1]->defense;	arrows[13].val2 = &temp_stats[1]->defense;
+	arrows[4].val3 = &temp_stats[2]->defense;	arrows[13].val3 = &temp_stats[2]->defense;
+	arrows[5].val1 = &temp_stats[0]->dodge;		arrows[14].val1 = &temp_stats[0]->dodge;
+	arrows[5].val2 = &temp_stats[1]->dodge;		arrows[14].val2 = &temp_stats[1]->dodge;
+	arrows[5].val3 = &temp_stats[2]->dodge;		arrows[14].val3 = &temp_stats[2]->dodge;
+	arrows[6].val1 = &temp_stats[0]->power;		arrows[15].val1 = &temp_stats[0]->power;
+	arrows[6].val2 = &temp_stats[1]->power;		arrows[15].val2 = &temp_stats[1]->power;
+	arrows[6].val3 = &temp_stats[2]->power;		arrows[15].val3 = &temp_stats[2]->power;
+	arrows[7].val1 = &temp_stats[0]->spirit;	arrows[16].val1 = &temp_stats[0]->spirit;
+	arrows[7].val2 = &temp_stats[1]->spirit;	arrows[16].val2 = &temp_stats[1]->spirit;
+	arrows[7].val3 = &temp_stats[2]->spirit;	arrows[16].val3 = &temp_stats[2]->spirit;
+	arrows[8].val1 = &temp_stats[0]->avoid;		arrows[17].val1 = &temp_stats[0]->avoid;
+	arrows[8].val2 = &temp_stats[1]->avoid;		arrows[17].val2 = &temp_stats[1]->avoid;
+	arrows[8].val3 = &temp_stats[2]->avoid;		arrows[17].val3 = &temp_stats[2]->avoid;
+}
+
+static void
+draw_stat_arrows(struct game *cur_game, struct stats *temp_stats[3], int points[2])
+{
+	int i;
+	int sprite;
+	
+	point_to_arrows(temp_stats);
+	for (i = 0; arrows[i].rect.x != -1; i++) {
+		if (arrows[i].type == ARROW_PLUS_MAJOR && points[0] > 0) {
+			sprite = 0;
+		} else if (arrows[i].type == ARROW_PLUS_MAJOR && points[0] <= 0) {
+			sprite = 2;
+		} else if (arrows[i].type == ARROW_PLUS_MINOR && points[1] > 0) {
+			sprite = 0;
+		} else if (arrows[i].type == ARROW_PLUS_MINOR && points[1] <= 0) { 
+			sprite = 2;
+		} else if ((arrows[i].type == ARROW_MINUS_MAJOR || arrows[i].type == ARROW_MINUS_MINOR) &&
+			   *((int *) arrows[i].val1) > 0) {
+			sprite = 1;
+		} else if ((arrows[i].type == ARROW_MINUS_MAJOR || arrows[i].type == ARROW_MINUS_MINOR) &&
+			   *((int *) arrows[i].val1) <= 0) {
+			sprite = 3;
+		} else {
+			continue;
+		}
+		draw_sprites(cur_game, cur_game->sprites.icons, sprite, arrows[i].rect.x, arrows[i].rect.y, arrows[i].rect.w, arrows[i].rect.h, 255, SDL_FALSE);
+	}	
 }
 
 static void
@@ -488,16 +617,61 @@ draw_sys(struct game *cur_game, struct user *cur_user)
 {
 	char money[6];
 	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE);
-	sprintf(money, "%5d", cur_user->character->money);
-	draw_sentence(cur_game, 911, 494, money, 0.1);
+	if (cur_user->character->money == 0) {
+		sprintf(money, "    0");
+	} else {
+		sprintf(money, "%5d", cur_user->character->money);
+	}
+	draw_sentence(cur_game, 915, 494, money, 0.095);
 	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE);
 	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE);
 }
 
 static void
-char_screen_click(struct game *cur_game, struct user *cur_user, int x, int y)
+char_screen_click(int points[2], int x, int y)
 {
+	int i;
+	for (i = 0; arrows[i].rect.x != -1; i++) {
+		if (x >= arrows[i].rect.x && x <= arrows[i].rect.x + arrows[i].rect.w && 
+		    y >= arrows[i].rect.y && y <= arrows[i].rect.y + arrows[i].rect.h) {
+			switch(arrows[i].type) {
+				case ARROW_PLUS_MAJOR:
+					if (points[0] > 0) {
+						points[0] -= 1;
+						*((int *) arrows[i].val1) += 1;
+						*((int *) arrows[i].val2) += 1;
+						*((int *) arrows[i].val3) += 1;
+					}
+					break;
+				case ARROW_PLUS_MINOR:
+					if (points[1] > 0) {
+						points[1] -= 1;
+						*((int *) arrows[i].val1) += 1;
+						*((int *) arrows[i].val2) += 1;
+						*((int *) arrows[i].val3) += 1;
+					}
+					break;
+				case ARROW_MINUS_MAJOR:
+					if (*((int *) arrows[i].val1) > 0) {
+						*((int *) arrows[i].val1) -= 1;
+						*((int *) arrows[i].val2) -= 1;
+						*((int *) arrows[i].val3) -= 1;
+						points[0] += 1;	
+					}
+					break;
+				case ARROW_MINUS_MINOR:
+					if (*((int *) arrows[i].val1) > 0) {
+						*((int *) arrows[i].val1) -= 1;
+						*((int *) arrows[i].val2) -= 1;
+						*((int *) arrows[i].val3) -= 1;
+						points[1] += 1;	
+					}
+					break;
+			}
+			return;
+		}
+	} 
 }
 
 static void
