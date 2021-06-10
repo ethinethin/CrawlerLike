@@ -22,11 +22,13 @@ struct game {
 		SDL_Texture **walls;
 		SDL_Texture **floors;
 		SDL_Texture **icons;
+		SDL_Texture **gear;
 		SDL_Texture **arrows;
 		SDL_Texture **font;
 	} sprites;
 	int state;
 	SDL_bool running;
+	SDL_bool newgame;
 	int num_maps;
 	struct map *maps;
 };

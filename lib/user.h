@@ -40,9 +40,9 @@ struct character {
 	int minor_points;
 	struct stats cur_stats;
 	struct stats max_stats;
-	void *inventory[8];
-	void *gear[3];
-	void *skills[3];
+	int inventory[8];
+	int gear[3];
+	int skills[3];
 };
 
 enum dirs { NORTH, EAST, SOUTH, WEST };
@@ -51,11 +51,8 @@ enum dirs { NORTH, EAST, SOUTH, WEST };
 extern void		init_seen(struct seen *cur_seen, int rows, int cols);
 extern void		kill_seen(struct seen *cur_seen);
 extern void		update_seen(struct user *cur_user);
-extern void		kill_char(struct user *cur_user);
-extern void		init_char(struct game *cur_game, struct user *cur_user);
 extern SDL_bool		move_player(struct map *cur_map, struct user *cur_user, int move);
 extern void		turn_player(struct user *cur_user, int turn);
 extern void		change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user);
-extern void		char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame);
 
 #endif

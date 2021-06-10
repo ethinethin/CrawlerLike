@@ -1,5 +1,6 @@
 #include <string.h>
 #include <SDL2/SDL.h>
+#include "char.h"
 #include "draw.h"
 #include "font.h"
 #include "home.h"
@@ -30,7 +31,7 @@ static void		new_click(struct game *cur_game, struct user *cur_user, int *whichs
 static void		draw_options(struct game *cur_game);
 static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
-static void		draw_yesno(struct game *cur_game, char *message);
+static void		draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet);
 static int		yesno_click(int x, int y);
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
 static void		exit_game(struct game *cur_game, struct user *cur_user);
@@ -68,7 +69,7 @@ title(struct game *cur_game, struct user *cur_user)
 				if (cur_game->state == UNLOADED) {
 					loop = SDL_FALSE;
 					cur_game->running = SDL_FALSE;
-				} else if (yes_no(cur_game, "Save and quit game in progress?") == SDL_TRUE) {
+				} else if (yes_no(cur_game, "Save and quit game in progress?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					save_all(cur_game, cur_user);
 					exit_game(cur_game, cur_user);
 					cur_game->running = SDL_FALSE;
@@ -170,7 +171,6 @@ struct menu_item title_menu[] = {
 	{ {-1, -1, 0, 0}, MENU_BOTH, NULL, 0, SDL_FALSE, TITLE_NULL }
 };
 
-
 static void
 draw_title(struct game *cur_game, SDL_bool save_exists)
 {
@@ -194,12 +194,12 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 			if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
 				*whichscreen = NEWGAME;
 			} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
-				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?") == SDL_TRUE) {
+				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?") == SDL_TRUE) {
+				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
@@ -219,7 +219,7 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				cur_game->running = SDL_FALSE;
 				*whichscreen = GAMESCREEN;
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?") == SDL_TRUE) {
+				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					save_all(cur_game, cur_user);
 					cur_game->running = SDL_FALSE;
 					exit_game(cur_game, cur_user);
@@ -400,7 +400,7 @@ change_resolution(struct game *cur_game, int w, int h)
 }
 
 SDL_bool
-yes_no(struct game *cur_game, char *message)
+yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
 {
 	SDL_Event event;
 	SDL_bool loop;
@@ -409,7 +409,7 @@ yes_no(struct game *cur_game, char *message)
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE) {
 		/* draw yesno screen - this renders a yes no box on top of the previously rendered window */
-		draw_yesno(cur_game, message);
+		draw_yesno(cur_game, message, view, char_sheet);
 		SDL_Delay(10);
 		/* poll for an event */
 		if (SDL_PollEvent(&event) == 0) continue;
@@ -443,17 +443,28 @@ yes_no(struct game *cur_game, char *message)
 }
 
 static void
-draw_yesno(struct game *cur_game, char *message)
+draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
 {
-	SDL_Rect src = { 0, 0, 1280, 720 };
-	SDL_Rect dest = { 0, 0, cur_game->display.w, cur_game->display.h };
+	SDL_Rect out_src = { 0, 0, 1280, 720 };
+	SDL_Rect out_dest = { 0, 0, cur_game->display.w, cur_game->display.h };
+	SDL_Rect view_src = { 341, 10, 929, 700 };
+	SDL_Rect view_dest = { 341 * cur_game->display.scale_w, 10 * cur_game->display.scale_h, 929 * cur_game->display.scale_w, 700  * cur_game->display.scale_h };	
+	SDL_Rect char_src = { 0, 0, 1152, 648 };
+	SDL_Rect char_dest = { 64 * cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152* cur_game->display.scale_w, 648 * cur_game->display.scale_h };
 
 	/* Reset render target to the renderer */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	/* Clear the renderer */
 	SDL_RenderClear(cur_game->display.renderer);
 	/* Copy the output texture to the renderer */
-	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &src, &dest);
+	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &out_src, &out_dest);
+	/* Draw others? */
+	if (view == SDL_TRUE) {
+		SDL_RenderCopy(cur_game->display.renderer, cur_game->display.view, &view_src, &view_dest);
+	}
+	if (char_sheet == SDL_TRUE) {
+		SDL_RenderCopy(cur_game->display.renderer, cur_game->display.char_screen_tex, &char_src, &char_dest);
+	}
 	/* Render a yesno box - scaled */
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
@@ -517,6 +528,8 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	init_char(cur_game, cur_user);
 	/* Update starting square as seen */
 	update_seen(cur_user);
+	/* Signify that this is a new game */
+	cur_game->newgame = SDL_TRUE;
 	/* Game is now loaded and running */
 	cur_game->state = LOADED;
 	

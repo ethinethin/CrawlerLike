@@ -14,7 +14,10 @@ struct colors {
 	{ 5, "darkgreen", { 0, 64, 0 } },
 	{ 6, "blue", { 0, 0, 255 } },
 	{ 7, "darkblue", {0, 0, 64} },
+	{ 8, "lightred", {192, 64, 0} },
+	{ 8, "lightgreen", {0, 96, 64} },
 	{ 8, "lightblue", {96, 144, 255} },
+	{ 8, "lightyellow", {255, 144, 96} },
 	{ -1, NULL, {0, 0, 0} }
 };
 	

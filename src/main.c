@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL2/SDL.h>
+#include "char.h"
 #include "draw.h"
 #include "home.h"
 #include "main.h"
@@ -26,10 +27,12 @@ struct game GAME = {
 	{ NULL,		/* sprites.walls */
 	  NULL,		/* sprites.floors */
 	  NULL,		/* sprites.icons */
+	  NULL,		/* sprites.gear */
 	  NULL,		/* sprites.arrows */
 	  NULL },	/* sprites.font */
 	UNLOADED,	/* state */
 	SDL_FALSE,	/* running */
+	SDL_FALSE,	/* newgame */
 	0,		/* num_maps */
 	NULL		/* maps */
 };
@@ -47,12 +50,12 @@ main()
 	struct user *cur_user;
 	
 	/* Initialize the game */
+	seed_rng();
 	SDL_Init(SDL_INIT_EVERYTHING);
 	cur_game = &GAME;
 	cur_user = &USER;
 	load_opts(cur_game);
 	display_init(cur_game);
-	seed_rng();
 	cur_game->running = SDL_TRUE;
 	title(cur_game, cur_user);
 	
@@ -70,6 +73,16 @@ main()
 	while (cur_game->running == SDL_TRUE) {
 		/* Delay 10 ms and poll for event */
 		SDL_Delay(10);
+		/* If we have entered a new game, draw the character sheet */
+		if (cur_game->newgame == SDL_TRUE) {
+			char_screen(cur_game, cur_user, SDL_TRUE);
+			/* We have to redraw the game window */
+			render_clear(cur_game, "darkred");
+			draw_view(cur_game, cur_user);
+			draw_screen(cur_game, cur_user);
+			render_present(cur_game, SDL_TRUE);
+			cur_game->newgame = SDL_FALSE;
+		}
 		if (SDL_PollEvent(&event) == 0) continue;
 		if (event.type == SDL_QUIT) { /* exit button pressed */
 			title(cur_game, cur_user);

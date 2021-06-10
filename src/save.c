@@ -94,7 +94,8 @@ save_info(struct game *cur_game, struct user *cur_user)
 	fp = fopen(filename, "w");
 	/* This may be important later */
 	fprintf(fp, "Game saved: %s", ctime(&timestamp));
-	fprintf(fp, "%s\n%s\n", "Line intentionally left blank", "Line intentionally left blank");
+	fprintf(fp, "Num maps: %d\n", cur_game->num_maps);
+	fprintf(fp, "Name: %s\n", cur_user->character->name);
 	fclose(fp);
 }
 
@@ -276,7 +277,10 @@ save_char(struct user *cur_user)
 	fprintf(fp, "stats_6=%d,%d\n", cur_user->character->cur_stats.dodge, cur_user->character->max_stats.dodge);
 	fprintf(fp, "stats_7=%d,%d\n", cur_user->character->cur_stats.power, cur_user->character->max_stats.power);
 	fprintf(fp, "stats_8=%d,%d\n", cur_user->character->cur_stats.spirit, cur_user->character->max_stats.spirit);
-	fprintf(fp, "stats_9=%d,%d\n", cur_user->character->cur_stats.avoid, cur_user->character->max_stats.avoid);
+	fprintf(fp, "stats_9=%d,%d\n", cur_user->character->cur_stats.avoid, cur_user->character->max_stats.avoid);	
+	fprintf(fp, "gear=%d,%d,%d\n", cur_user->character->gear[0], cur_user->character->gear[1], cur_user->character->gear[2]);
+	fprintf(fp, "skills=%d,%d,%d\n", cur_user->character->skills[0], cur_user->character->skills[1], cur_user->character->skills[2]);
+	fprintf(fp, "inventory=%d,%d,%d,%d,%d,%d,%d,%d\n", cur_user->character->inventory[0], cur_user->character->inventory[1], cur_user->character->inventory[2], cur_user->character->inventory[3], cur_user->character->inventory[4], cur_user->character->inventory[5], cur_user->character->inventory[6], cur_user->character->inventory[7]);
 	fclose(fp);
 }
 
@@ -307,5 +311,8 @@ load_char(struct user *cur_user)
 	fscanf(fp, "stats_7=%d,%d\n", &cur_user->character->cur_stats.power, &cur_user->character->max_stats.power);
 	fscanf(fp, "stats_8=%d,%d\n", &cur_user->character->cur_stats.spirit, &cur_user->character->max_stats.spirit);
 	fscanf(fp, "stats_9=%d,%d\n", &cur_user->character->cur_stats.avoid, &cur_user->character->max_stats.avoid);
+	fscanf(fp, "gear=%d,%d,%d\n", &cur_user->character->gear[0], &cur_user->character->gear[1], &cur_user->character->gear[2]);
+	fscanf(fp, "skills=%d,%d,%d\n", &cur_user->character->skills[0], &cur_user->character->skills[1], &cur_user->character->skills[2]);
+	fscanf(fp, "inventory=%d,%d,%d,%d,%d,%d,%d,%d\n", &cur_user->character->inventory[0], &cur_user->character->inventory[1], &cur_user->character->inventory[2], &cur_user->character->inventory[3], &cur_user->character->inventory[4], &cur_user->character->inventory[5], &cur_user->character->inventory[6], &cur_user->character->inventory[7]);
 	fclose(fp);
 }

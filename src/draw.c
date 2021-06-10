@@ -11,6 +11,7 @@
 static void		  load_sprites(struct game *cur_game);
 static SDL_Texture	**load_image(struct game *cur_game, char *file, int num, int w, int h);
 static void		  unload_sprites(struct game *cur_game);
+static void		  unload_image(SDL_Texture **sprites, int num);
 
 void
 display_init(struct game *cur_game)
@@ -68,7 +69,8 @@ load_sprites(struct game *cur_game)
 {
 	cur_game->sprites.walls = load_image(cur_game, "art/walls.bmp", 24, 64, 64);
 	cur_game->sprites.floors = load_image(cur_game, "art/floors.bmp", 3, 300, 230);
-	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 18, 50, 50);
+	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 16, 50, 50);
+	cur_game->sprites.gear = load_image(cur_game, "art/gear.bmp", 6, 50, 50);
 	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
 }
 
@@ -101,30 +103,22 @@ load_image(struct game *cur_game, char *file, int num, int w, int h)
 static void
 unload_sprites(struct game *cur_game)
 {
-	int i;
-	
-	/* Unload walls */
-	for (i = 0; i < 24; i++) {
-		SDL_DestroyTexture(*(cur_game->sprites.walls + i));
-	}
-	free(cur_game->sprites.walls);
-	/* Unload floors */
-	for (i = 0; i < 3; i++) {
-		SDL_DestroyTexture(*(cur_game->sprites.floors + i));
-	}
-	free(cur_game->sprites.floors);
-	/* Unload icons */
-	for (i = 0; i < 18; i++) {
-		SDL_DestroyTexture(*(cur_game->sprites.icons + i));
-	}
-	free(cur_game->sprites.icons);
-	/* Unload arrows */
-	for (i = 0; i < 6; i++) {
-		SDL_DestroyTexture(*(cur_game->sprites.arrows + i));
-	}
-	free(cur_game->sprites.arrows);
+	unload_image(cur_game->sprites.walls, 24);
+	unload_image(cur_game->sprites.floors, 3);
+	unload_image(cur_game->sprites.icons, 16);
+	unload_image(cur_game->sprites.gear, 6);
+	unload_image(cur_game->sprites.arrows, 6);
 }
 
+static void
+unload_image(SDL_Texture **sprites, int num)
+{
+	int i;
+	for (i = 0; i < num; i++) {
+		SDL_DestroyTexture(*(sprites + i));
+	}
+	free(sprites);
+}
 
 void
 render_clear(struct game *cur_game, char *col)
@@ -215,4 +209,35 @@ draw_screen(struct game *cur_game, struct user *cur_user)
 	/* Output some text */
 	sprintf(text, "Dungeon Level: %2d", cur_user->map + 1);
 	draw_sentence(cur_game, 10, 340, text, 0.1);
+	sprintf(text, "Day: %3d", 1);
+	draw_sentence(cur_game, 10, 362, text, 0.1);
+	/* Draw player info */
+	draw_rect(cur_game, 10, 386, 319, 324, SDL_TRUE, "black");
+	draw_rect(cur_game, 10, 386, 319, 324, SDL_FALSE, "white");
+	sprintf(text, "%s", cur_user->character->name);
+	draw_sentence(cur_game, 20, 396, text, 0.1);
+	sprintf(text, "Lv. %d", cur_user->character->level);
+	draw_sentence(cur_game, 20, 418, text, 0.1);
+	/* Draw points */
+	draw_sentence(cur_game, 30, 441, "LP", 0.1);
+	draw_rect(cur_game, 75, 442, 235, 16, SDL_TRUE, "lightred");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 442, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 442, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 442, 50, 50, 255, SDL_TRUE);
+	draw_sentence(cur_game, 30, 466, "SP", 0.1);
+	draw_rect(cur_game, 75, 467, 235, 16, SDL_TRUE, "lightgreen");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 467, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 467, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 467, 50, 50, 255, SDL_TRUE);
+	draw_sentence(cur_game, 30, 488, "MP", 0.1);
+	draw_rect(cur_game, 75, 489, 235, 16, SDL_TRUE, "lightblue");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 489, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 489, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 489, 50, 50, 255, SDL_TRUE);
+	draw_sentence(cur_game, 30, 510, "XP", 0.1);
+	draw_rect(cur_game, 75, 511, 235, 16, SDL_TRUE, "lightyellow");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 511, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 511, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 511, 50, 50, 255, SDL_TRUE);
+	
 }
