@@ -142,10 +142,10 @@ draw_drag(struct game *cur_game, SDL_Rect *mouse, int i)
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &out_src, &out_dest);
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.view, &view_src, &view_dest);
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.char_screen_tex, &screen_src, &screen_dest);
-	/* Draw empty slot over the icon */
-	draw_sprites(cur_game, cur_game->sprites.icons, item_coords[i].empty, item_coords[i].coords.x + 64, item_coords[i].coords.y + 36, item_coords[i].coords.w, item_coords[i].coords.h, 255, SDL_FALSE);
-	/* Draw icon for item being dragged */
-	draw_sprites(cur_game, cur_game->sprites.gear, *item_coords[i].slot - 1, mouse->x - mouse->w + 64, mouse->y - mouse->h + 36, 100, 100, 255, SDL_FALSE);
+	/* Draw empty slot over the icon - need to scale its location and size because it's being rendered directly */
+	draw_sprites(cur_game, cur_game->sprites.icons, item_coords[i].empty, (item_coords[i].coords.x + 64) * cur_game->display.scale_w, (item_coords[i].coords.y + 36) * cur_game->display.scale_h, item_coords[i].coords.w * cur_game->display.scale_w, item_coords[i].coords.h * cur_game->display.scale_h, 255, SDL_FALSE);
+	/* Draw icon for item being dragged - also scaled*/
+	draw_sprites(cur_game, cur_game->sprites.gear, *item_coords[i].slot - 1, (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
