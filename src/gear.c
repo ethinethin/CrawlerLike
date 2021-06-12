@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
+#include "char.h"
 #include "draw.h"
 #include "home.h"
 #include "gear.h"
@@ -7,32 +8,40 @@
 #include "user.h"
 
 /* Function prototypes */
-static void		prep_item_coords(struct user *cur_user);
-static int		find_item(int x, int y);
-static SDL_bool		drag_loop(struct game *cur_game, SDL_Rect *mouse, int i);
-static void		draw_drag(struct game *cur_game, SDL_Rect *mouse, int i);
-static void		handle_transfer(int i, int j);
+static void		 prep_item_coords(struct user *cur_user);
+static int		 find_item(int x, int y);
+static SDL_bool		 drag_loop(struct game *cur_game, SDL_Rect *mouse, int i);
+static void		 draw_drag(struct game *cur_game, SDL_Rect *mouse, int i);
+static void		 handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j);
+static int		 gear_type(int id);
+static int		 gear_value(int id);
+static struct gear 	*find_gear(int id);
 
+enum type { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_ITEM, GEAR_ANY, GEAR_TRASH, GEAR_NULL };
+
+/* Drawing/Clicking item coordinates on character screen */
 struct item_coords {
 	SDL_Rect coords;
 	int *slot;
 	int empty;
+	int type;
 } item_coords[] = {
-	{ { 25, 419, 100, 100 }, NULL, 8 },
-	{ { 145, 419, 100, 100 }, NULL, 9 },
-	{ { 265, 419, 100, 100 }, NULL, 10 },
-	{ { 25, 529, 100, 100 }, NULL, 11 },
-	{ { 145, 529, 100, 100 }, NULL, 11 },
-	{ { 265, 529, 100, 100 }, NULL, 11 },
-	{ { 408, 419, 100, 100 }, NULL, 12 }, 
-	{ { 528, 419, 100, 100 }, NULL, 12 }, 
-	{ { 648, 419, 100, 100 }, NULL, 12 }, 
-	{ { 768, 419, 100, 100 }, NULL, 12 }, 
-	{ { 408, 529, 100, 100 }, NULL, 12 }, 
-	{ { 528, 529, 100, 100 }, NULL, 12 }, 
-	{ { 648, 529, 100, 100 }, NULL, 12 }, 
-	{ { 768, 529, 100, 100 }, NULL, 12 },
-	{ { -1, -1, 0, 0 }, NULL, 0 }
+	{ { 25, 419, 100, 100 }, NULL, 8, GEAR_WEAPON },
+	{ { 145, 419, 100, 100 }, NULL, 9, GEAR_ARMOR },
+	{ { 265, 419, 100, 100 }, NULL, 10, GEAR_ACCESSORY },
+	{ { 25, 529, 100, 100 }, NULL, 11, GEAR_SKILL },
+	{ { 145, 529, 100, 100 }, NULL, 11, GEAR_SKILL },
+	{ { 265, 529, 100, 100 }, NULL, 11, GEAR_SKILL },
+	{ { 408, 419, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 528, 419, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 648, 419, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 768, 419, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 408, 529, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 528, 529, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 648, 529, 100, 100 }, NULL, 12, GEAR_ANY }, 
+	{ { 768, 529, 100, 100 }, NULL, 12, GEAR_ANY },
+	{ { 908, 529, 100, 100 }, NULL, 0, GEAR_TRASH },
+	{ { -1, -1, 0, 0 }, NULL, 0, GEAR_ANY }
 };
 
 static void
@@ -79,7 +88,7 @@ drag_mouse(struct game *cur_game, struct user *cur_user, int x, int y)
 	if (j == -1) return SDL_FALSE;
 	
 	/* Handle the item transfer */
-	handle_transfer(i, j);
+	handle_transfer(cur_game, cur_user, i, j);
 	return SDL_TRUE;
 }
 
@@ -150,11 +159,256 @@ draw_drag(struct game *cur_game, SDL_Rect *mouse, int i)
 }
 
 static void
-handle_transfer(int i, int j)
+handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 {
+	char message[100];
+	int value;
 	int tmp;
-	/* Just swap for now */
-	tmp = *item_coords[i].slot;
-	*item_coords[i].slot = *item_coords[j].slot;
-	*item_coords[j].slot = tmp;
+	int src_type, dest_type;
+	
+	/* Is the destination type compatible with the source type? */
+	src_type = gear_type(*item_coords[i].slot);
+	if (item_coords[j].type == GEAR_TRASH) {
+		value = gear_value(*item_coords[i].slot);
+		if (value != -1) {
+			sprintf(message, "This will destroy the item. You will receive %d gold. Okay?", value);
+			if (yes_no(cur_game, message, SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+				cur_user->character->money += value;
+				del_gear(*item_coords[i].slot);
+				*item_coords[i].slot = 0;
+			}
+		}
+		return;
+	} else if (*item_coords[j].slot == 0) {
+		dest_type = item_coords[j].type;
+	} else {
+		dest_type = gear_type(*item_coords[j].slot);
+	}
+	/* Make the swap */
+	if (dest_type == GEAR_ANY || src_type == dest_type) {
+		tmp = *item_coords[i].slot;
+		*item_coords[i].slot = *item_coords[j].slot;
+		*item_coords[j].slot = tmp;
+	}
+}
+
+/* Gear table linked list stuff - all below */
+struct gear {
+	int id;
+	int type;
+	int sprite;
+	int level;
+	int value;
+	struct stats mods;
+	struct gear *next;
+};
+
+struct gear *GEAR;
+int max_id;
+
+void
+init_gear(void)
+{
+	int i;
+	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
+	struct stats mods;
+
+	/* Allocate memory for gear table, point to null, and set first id */
+	GEAR = malloc(sizeof(*GEAR));
+	GEAR->next = NULL;
+	max_id = 1;
+	
+	/* Temporary - make starting gear */
+	zero_stats(&mods);
+	for (i = 1; i < 7; i++) {
+		add_gear(0, i, types[i - 1], 1, 10, &mods);
+	}
+}
+
+void
+kill_gear(void)
+{
+	struct gear *tmp;
+	struct gear *last;
+	
+	tmp = GEAR;
+	while (tmp->next != NULL) {
+		last = tmp;
+		tmp = tmp->next;
+		free(last);
+	}
+	free(tmp);
+}
+
+void
+add_gear(int id, int sprite, int type, int level, int value, struct stats *mods)
+{
+	struct gear *tmp;
+	struct gear *new_gear;
+	
+	/* Make the new gear */
+	new_gear = malloc(sizeof(*new_gear));
+	new_gear->sprite = sprite;
+	if (id == 0) {
+		new_gear->id = max_id;
+		max_id += 1;
+	} else {
+		new_gear->id = id;
+	}
+	new_gear->type = type;
+	new_gear->level = level;
+	new_gear->value = value;
+	copy_stats(mods, &new_gear->mods);
+	new_gear->next = NULL;
+	/* Add it to the list */
+	tmp = GEAR;
+	while (tmp->next != NULL) {
+		tmp = tmp->next;
+	}
+	tmp->next = new_gear;
+}
+
+void
+del_gear(int id)
+{
+	struct gear *tmp;
+	struct gear *last;
+	
+	tmp = GEAR;
+	while (tmp->next != NULL) {
+		last = tmp;
+		tmp = tmp->next;
+		if (tmp->id == id) {
+			last->next = tmp->next;
+			free(tmp);
+			return;
+		}
+	}
+}
+
+int
+gear_sprite(int id)
+{
+	struct gear *tmp;
+	
+	tmp = find_gear(id);
+	if (tmp != NULL) {
+		return tmp->sprite;
+	}
+	return 0;
+}
+
+struct stats *
+gear_stats(int id)
+{
+	struct gear *tmp;
+	
+	tmp = find_gear(id);
+	if (tmp != NULL) {
+		return &tmp->mods;
+	}
+	return NULL;
+}
+
+static int
+gear_type(int id)
+{
+	struct gear *tmp;
+	
+	tmp = find_gear(id);
+	if (tmp != NULL) {
+		return tmp->type;
+	}
+	return GEAR_NULL;
+}
+
+static int
+gear_value(int id)
+{
+	struct gear *tmp;
+	
+	tmp = find_gear(id);
+	if (tmp != NULL) {
+		return tmp->value;
+	}
+	return -1;
+}
+
+static struct gear *
+find_gear(int id)
+{
+	struct gear *tmp;
+
+	tmp = GEAR;
+	while (tmp->next != NULL) {
+		tmp = tmp->next;
+		if (tmp->id == id) {
+			return tmp;
+		}
+	}
+	return NULL;
+}
+
+void
+dump_gear(FILE *fp)
+{
+	struct gear *tmp;
+	
+	/* Print out max_id */
+	fprintf(fp, "max_id=%d\n", max_id);
+	
+	tmp = GEAR;
+	while (tmp->next != NULL) {
+		tmp = tmp->next;
+		fprintf(fp, "id=%d\n", tmp->id);
+		fprintf(fp, "  type=%d\n", tmp->type);
+		fprintf(fp, "  sprite=%d\n", tmp->sprite);
+		fprintf(fp, "  level=%d\n", tmp->level);
+		fprintf(fp, "  value=%d\n", tmp->value);
+		fprintf(fp, "  mods.life=%d\n", tmp->mods.life);
+		fprintf(fp, "  mods.stamina=%d\n", tmp->mods.stamina);
+		fprintf(fp, "  mods.magic=%d\n", tmp->mods.magic);
+		fprintf(fp, "  mods.experience=%d\n", tmp->mods.experience);
+		fprintf(fp, "  mods.attack=%d\n", tmp->mods.attack);
+		fprintf(fp, "  mods.defense=%d\n", tmp->mods.defense);
+		fprintf(fp, "  mods.dodge=%d\n", tmp->mods.dodge);
+		fprintf(fp, "  mods.power=%d\n", tmp->mods.power);
+		fprintf(fp, "  mods.spirit=%d\n", tmp->mods.spirit);
+		fprintf(fp, "  mods.avoid=%d\n", tmp->mods.avoid);
+	}
+	fprintf(fp, "id=0\n");
+}
+
+void
+undump_gear(FILE *fp)
+{
+	struct gear tmp;
+	
+	/* Set up gear table */
+	GEAR = malloc(sizeof(*GEAR));
+	GEAR->next = NULL;
+
+	/* Load max_id */
+	fscanf(fp, "max_id=%d\n", &max_id);
+	while(SDL_TRUE) {
+		fscanf(fp, "id=%d\n", &tmp.id);
+		if (tmp.id == 0) {
+			break;
+		}
+		fscanf(fp, "  type=%d\n", &tmp.type);
+		fscanf(fp, "  sprite=%d\n", &tmp.sprite);
+		fscanf(fp, "  level=%d\n", &tmp.level);
+		fscanf(fp, "  value=%d\n", &tmp.value);
+		fscanf(fp, "  mods.life=%d\n", &tmp.mods.life);
+		fscanf(fp, "  mods.stamina=%d\n", &tmp.mods.stamina);
+		fscanf(fp, "  mods.magic=%d\n", &tmp.mods.magic);
+		fscanf(fp, "  mods.experience=%d\n", &tmp.mods.experience);
+		fscanf(fp, "  mods.attack=%d\n", &tmp.mods.attack);
+		fscanf(fp, "  mods.defense=%d\n", &tmp.mods.defense);
+		fscanf(fp, "  mods.dodge=%d\n", &tmp.mods.dodge);
+		fscanf(fp, "  mods.power=%d\n", &tmp.mods.power);
+		fscanf(fp, "  mods.spirit=%d\n", &tmp.mods.spirit);
+		fscanf(fp, "  mods.avoid=%d\n", &tmp.mods.avoid);
+		add_gear(tmp.id, tmp.sprite, tmp.type, tmp.level, tmp.value, &tmp.mods);
+	}
 }

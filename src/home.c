@@ -3,6 +3,7 @@
 #include "char.h"
 #include "draw.h"
 #include "font.h"
+#include "gear.h"
 #include "home.h"
 #include "main.h"
 #include "maze.h"
@@ -528,6 +529,8 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	init_char(cur_game, cur_user);
 	/* Update starting square as seen */
 	update_seen(cur_user);
+	/* Setup the gear table */
+	init_gear();
 	/* Signify that this is a new game */
 	cur_game->newgame = SDL_TRUE;
 	/* Game is now loaded and running */
@@ -551,5 +554,7 @@ exit_game(struct game *cur_game, struct user *cur_user)
 	}
 	free(cur_game->maps);
 	free(cur_user->seen);
+	/* Kill the gear table */
+	kill_gear();
 	cur_game->state = UNLOADED;
 }

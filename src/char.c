@@ -11,8 +11,6 @@
 /* Function prototypes */
 static void	name_char(struct game *cur_game, struct user *cur_user);
 static void	draw_name(struct game *cur_game, char buffer[18]);
-static void	zero_stats(struct stats *increase);
-static void	copy_stats(struct stats *src, struct stats *dest);
 static SDL_bool	changes_made(struct user *cur_user, int points[2]);
 static void	point_to_stats(struct user *cur_user, struct stats *temp_stats[3], int points[2]);
 static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, struct stats *temp_stats[3], int points[2]);
@@ -297,26 +295,28 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	cur_user->character->minor_points = points[1];
 }
 
-static void
-zero_stats(struct stats *increase)
+void
+zero_stats(struct stats *cur_stats)
 {
-	increase->life = 0;
-	increase->stamina = 0;
-	increase->magic = 0;
-	increase->attack = 0;
-	increase->defense = 0;
-	increase->dodge = 0;
-	increase->power = 0;
-	increase->spirit = 0;
-	increase->avoid = 0;
+	cur_stats->life = 0;
+	cur_stats->stamina = 0;
+	cur_stats->magic = 0;
+	cur_stats->experience = 0;
+	cur_stats->attack = 0;
+	cur_stats->defense = 0;
+	cur_stats->dodge = 0;
+	cur_stats->power = 0;
+	cur_stats->spirit = 0;
+	cur_stats->avoid = 0;
 }
 
-static void
+void
 copy_stats(struct stats *src, struct stats *dest)
 {
 	dest->life = src->life;
 	dest->stamina = src->stamina;
 	dest->magic = src->magic;
+	dest->experience = src->experience;
 	dest->attack = src->attack;
 	dest->defense = src->defense;
 	dest->dodge = src->dodge;
@@ -553,18 +553,25 @@ static void
 draw_gear(struct game *cur_game, struct user *cur_user)
 {
 	int i;
+	int sprite;
 	int x[] = { 25, 145, 265 };
 	
 	for (i = 0; i < 3; i++) {
 		/* Draw gear */
 		draw_sprites(cur_game, cur_game->sprites.icons, 8 + i, x[i], 419, 100, 100, 255, SDL_FALSE);
 		if (cur_user->character->gear[i] != 0) {
-			draw_sprites(cur_game, cur_game->sprites.gear, cur_user->character->gear[i] - 1, x[i], 419, 100, 100, 255, SDL_FALSE);
+			sprite = gear_sprite(cur_user->character->gear[i]);
+			if (sprite != 0) {
+				draw_sprites(cur_game, cur_game->sprites.gear, sprite - 1, x[i], 419, 100, 100, 255, SDL_FALSE);
+			}
 		}
 		/* Draw skills */
 		draw_sprites(cur_game, cur_game->sprites.icons, 11, x[i], 529, 100, 100, 255, SDL_FALSE);
 		if (cur_user->character->skills[i] != 0) {
-			draw_sprites(cur_game, cur_game->sprites.gear, cur_user->character->skills[i] - 1, x[i], 529, 100, 100, 255, SDL_FALSE);
+			sprite = gear_sprite(cur_user->character->skills[i]);
+			if (sprite != 0) {
+				draw_sprites(cur_game, cur_game->sprites.gear, sprite - 1, x[i], 529, 100, 100, 255, SDL_FALSE);
+			}
 		}
 	}
 }
@@ -573,12 +580,16 @@ static void
 draw_inv(struct game *cur_game, struct user *cur_user)
 {
 	int i, j;
+	int sprite;
 	int x[] = { 408, 528, 648, 768 };
 	for (i = 0; i < 2; i++) {
 		for (j = 0; j < 4; j++) {
 			draw_sprites(cur_game, cur_game->sprites.icons, 12, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
 			if (cur_user->character->inventory[j + i * 4] != 0) {
-				draw_sprites(cur_game, cur_game->sprites.gear, cur_user->character->inventory[j + i * 4] - 1, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
+				sprite = gear_sprite(cur_user->character->inventory[j + i * 4]);
+				if (sprite != 0) {
+					draw_sprites(cur_game, cur_game->sprites.gear, sprite - 1, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
+				}
 			}
 		}
 	}

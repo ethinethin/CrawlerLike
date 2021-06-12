@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <SDL2/SDL.h>
 #include <time.h>
+#include "gear.h"
 #include "home.h"
 #include "main.h"
 #include "maze.h"
@@ -18,6 +19,8 @@ static void	save_player(struct user *cur_user);
 static void	load_player(struct user *cur_user);
 static void	save_char(struct user *cur_user);
 static void	load_char(struct user *cur_user);
+static void	save_gear(void);
+static void	load_gear(void);
 
 SDL_bool checked_directories = SDL_FALSE;
 static void
@@ -127,6 +130,7 @@ save_all(struct game *cur_game, struct user *cur_user)
 	save_map(cur_game);
 	save_player(cur_user);
 	save_char(cur_user);
+	save_gear();
 }
 
 void
@@ -135,6 +139,7 @@ load_all(struct game *cur_game, struct user *cur_user)
 	load_map(cur_game);
 	load_player(cur_user);
 	load_char(cur_user);
+	load_gear();
 	cur_game->state = LOADED;
 }
 
@@ -314,5 +319,29 @@ load_char(struct user *cur_user)
 	fscanf(fp, "gear=%d,%d,%d\n", &cur_user->character->gear[0], &cur_user->character->gear[1], &cur_user->character->gear[2]);
 	fscanf(fp, "skills=%d,%d,%d\n", &cur_user->character->skills[0], &cur_user->character->skills[1], &cur_user->character->skills[2]);
 	fscanf(fp, "inventory=%d,%d,%d,%d,%d,%d,%d,%d\n", &cur_user->character->inventory[0], &cur_user->character->inventory[1], &cur_user->character->inventory[2], &cur_user->character->inventory[3], &cur_user->character->inventory[4], &cur_user->character->inventory[5], &cur_user->character->inventory[6], &cur_user->character->inventory[7]);
+	fclose(fp);
+}
+
+static void
+save_gear(void)
+{
+	char filename[20] = "save/gear.txt";
+	FILE *fp;
+	
+	/* Open and dump gear table */
+	fp = fopen(filename, "w");
+	dump_gear(fp);
+	fclose(fp);
+}
+
+static void
+load_gear(void)
+{
+	char filename[20] = "save/gear.txt";
+	FILE *fp;
+	
+	/* Open and load character parameters */
+	fp = fopen(filename, "r");
+	undump_gear(fp);
 	fclose(fp);
 }
