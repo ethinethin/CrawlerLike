@@ -1,12 +1,14 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 
-void
+long int
 seed_rng(void)
 {
 	struct timeval time;
 	gettimeofday(&time, NULL);
-	srand(time.tv_sec + time.tv_usec);
+	srand(time.tv_sec);
+	return (time.tv_sec);
 }
 
 int

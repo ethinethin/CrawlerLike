@@ -6,6 +6,9 @@
 #include "rand.h"
 #include "user.h"
 
+/* Function prototypes */
+static void	pass_time(struct game *cur_game);
+
 void
 init_seen(struct seen *cur_seen, int rows, int cols)
 {
@@ -43,10 +46,11 @@ update_seen(struct user *cur_user)
 }
 
 SDL_bool
-move_player(struct map *cur_map, struct user *cur_user, int move)
+move_player(struct game *cur_game, struct user *cur_user, int move)
 {
 	int row_d, col_d;
-	
+	struct map *cur_map;
+		
 	/* Set the direction to be changed based on facing direction */
 	row_d = 0;
 	col_d = 0;
@@ -54,6 +58,8 @@ move_player(struct map *cur_map, struct user *cur_user, int move)
 	if (cur_user->facing == EAST) col_d = 1;
 	if (cur_user->facing == SOUTH) row_d = 1;
 	if (cur_user->facing == WEST) col_d = -1;
+	/* Point to the right map */
+	cur_map =  cur_game->maps + cur_user->map;
 	/* Multiply by move, which is negative 1 if the player is backing up */
 	row_d *= move;
 	col_d *= move;
@@ -62,6 +68,7 @@ move_player(struct map *cur_map, struct user *cur_user, int move)
 	    *(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == DOOR) {
 		cur_user->row += row_d * 2;
 		cur_user->col += col_d * 2;
+		pass_time(cur_game);
 		return SDL_TRUE;
 	}
 	return SDL_FALSE;
@@ -85,4 +92,14 @@ change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user)
 	}
 	if (cur_user->map > cur_game->num_maps - 1) cur_user->map = cur_game->num_maps - 1;
 	if (cur_user->map < 0) cur_user->map = 0;
+}
+
+static void
+pass_time(struct game *cur_game)
+{
+	cur_game->minute += 1;
+	if (cur_game->minute == 144) {
+		cur_game->day += 1;
+		cur_game->minute = 0;
+	}
 }

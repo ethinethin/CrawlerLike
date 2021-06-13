@@ -29,6 +29,9 @@ struct game {
 	int state;
 	SDL_bool running;
 	SDL_bool newgame;
+	int day;
+	int minute;
+	long int seed;
 	int num_maps;
 	struct map *maps;
 };

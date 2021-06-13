@@ -8,6 +8,7 @@
 #include "home.h"
 #include "main.h"
 #include "maze.h"
+#include "rand.h"
 #include "save.h"
 #include "user.h"
 
@@ -140,6 +141,8 @@ load_all(struct game *cur_game, struct user *cur_user)
 	load_player(cur_user);
 	load_char(cur_user);
 	load_gear();
+	/* Seed RNG */
+	seed_rng();
 	cur_game->state = LOADED;
 }
 
@@ -151,6 +154,11 @@ save_map(struct game *cur_game)
 	FILE *fp;
 	
 	fp = fopen(filename, "w");
+	/* Output time */
+	fprintf(fp, "day=%d\n", cur_game->day);
+	fprintf(fp, "minute=%d\n", cur_game->minute);
+	/* Output RNG seed */
+	fprintf(fp, "seed=%ld\n", cur_game->seed);
 	/* Output dimensions */
 	fprintf(fp, "num_maps=%d\n", cur_game->num_maps);
 	fprintf(fp, "rows=%d\n", cur_game->maps[0].rows);
@@ -177,6 +185,11 @@ load_map(struct game *cur_game)
 	FILE *fp;
 	
 	fp = fopen(filename, "r");
+	/* Input time */
+	fscanf(fp, "day=%d\n", &cur_game->day);
+	fscanf(fp, "minute=%d\n", &cur_game->minute);
+	/* Input RNG seed */
+	fscanf(fp, "seed=%ld\n", &cur_game->seed);
 	/* Read in dimensions */
 	fscanf(fp, "num_maps=%d\n", &cur_game->num_maps);
 	fscanf(fp, "rows=%d\n", &rows);

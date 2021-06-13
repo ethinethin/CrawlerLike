@@ -33,6 +33,9 @@ struct game GAME = {
 	UNLOADED,	/* state */
 	SDL_FALSE,	/* running */
 	SDL_FALSE,	/* newgame */
+	1,		/* day */
+	0,		/* minute */
+	0,		/* seed */
 	0,		/* num_maps */
 	NULL		/* maps */
 };
@@ -50,7 +53,6 @@ main()
 	struct user *cur_user;
 	
 	/* Initialize the game */
-	seed_rng();
 	SDL_Init(SDL_INIT_EVERYTHING);
 	cur_game = &GAME;
 	cur_user = &USER;
@@ -94,11 +96,11 @@ main()
 					break;
 				case SDLK_UP: /* move forward */
 				case SDLK_w:
-					move_player(cur_game->maps + cur_user->map, cur_user, 1);
+					move_player(cur_game, cur_user, 1);
 					break;
 				case SDLK_DOWN: /* move backward */
 				case SDLK_s:
-					move_player(cur_game->maps + cur_user->map, cur_user, -1);
+					move_player(cur_game, cur_user, -1);
 					break;
 				case SDLK_LEFT: /* turn left */
 				case SDLK_a:

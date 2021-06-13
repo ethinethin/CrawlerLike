@@ -70,7 +70,7 @@ load_sprites(struct game *cur_game)
 	cur_game->sprites.walls = load_image(cur_game, "art/walls.bmp", 24, 64, 64);
 	cur_game->sprites.floors = load_image(cur_game, "art/floors.bmp", 3, 300, 230);
 	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 16, 50, 50);
-	cur_game->sprites.gear = load_image(cur_game, "art/gear.bmp", 6, 50, 50);
+	cur_game->sprites.gear = load_image(cur_game, "art/gear.bmp", 9, 50, 50);
 	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
 }
 
@@ -106,7 +106,7 @@ unload_sprites(struct game *cur_game)
 	unload_image(cur_game->sprites.walls, 24);
 	unload_image(cur_game->sprites.floors, 3);
 	unload_image(cur_game->sprites.icons, 16);
-	unload_image(cur_game->sprites.gear, 6);
+	unload_image(cur_game->sprites.gear, 9);
 	unload_image(cur_game->sprites.arrows, 6);
 }
 
@@ -202,6 +202,8 @@ draw_sprites(struct game *cur_game, SDL_Texture **sprites, int sprite_id, int x,
 void
 draw_screen(struct game *cur_game, struct user *cur_user)
 {
+	int hh;
+	int mm;
 	char text[100];
 
 	/* Draw map in top left corner */
@@ -209,7 +211,9 @@ draw_screen(struct game *cur_game, struct user *cur_user)
 	/* Output some text */
 	sprintf(text, "Dungeon Level: %2d", cur_user->map + 1);
 	draw_sentence(cur_game, 10, 340, text, 0.1);
-	sprintf(text, "Day: %3d", 1);
+	hh = cur_game->minute/6;
+	mm = cur_game->minute - hh * 6;
+	sprintf(text, "Day: %3d, (%2d:%02d)", cur_game->day, hh, mm*10);
 	draw_sentence(cur_game, 10, 362, text, 0.1);
 	/* Draw player info */
 	draw_rect(cur_game, 10, 386, 319, 324, SDL_TRUE, "black");

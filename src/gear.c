@@ -179,6 +179,9 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 			}
 		}
 		return;
+	} else if (item_coords[i].type == GEAR_ANY && item_coords[j].type == GEAR_ANY) {
+		src_type = GEAR_ANY;
+		dest_type = GEAR_ANY;
 	} else if (*item_coords[j].slot == 0) {
 		dest_type = item_coords[j].type;
 	} else {
@@ -210,7 +213,7 @@ void
 init_gear(void)
 {
 	int i;
-	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
+	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
 	struct stats mods;
 
 	/* Allocate memory for gear table, point to null, and set first id */
@@ -220,7 +223,7 @@ init_gear(void)
 	
 	/* Temporary - make starting gear */
 	zero_stats(&mods);
-	for (i = 1; i < 7; i++) {
+	for (i = 1; i < 10; i++) {
 		add_gear(0, i, types[i - 1], 1, 10, &mods);
 	}
 }

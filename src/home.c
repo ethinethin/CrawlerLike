@@ -511,7 +511,9 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	/* Figure out map sizes needed for given dimensions */
 	map_dim_row = map_dim_row * 2 + 1;
 	map_dim_col = map_dim_col * 2 + 1;
-	/* Initialize all maps and seen with end of previous map as start */
+	/* Seed random number generator */
+	cur_game->seed = seed_rng();
+	/* Initialize all maps and seen and generate all maps */
 	for (i = 0; i < num_maps; i++) {
 		init_map(&cur_game->maps[i], map_dim_row, map_dim_col);
 		init_seen(&cur_user->seen[i], map_dim_row, map_dim_col);

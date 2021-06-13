@@ -60,16 +60,20 @@ init_char(struct game *cur_game, struct user *cur_user)
 	cur_user->character->max_stats.avoid = 10;
 	/* Start with 100 money */
 	cur_user->character->money = 100;
-	/* Temporary - gear, skills, and inventory */
+	/* TEMPORARY - gear, skills, and inventory */
 	/* I will eventually add a selection of starting skills and probably
 	 * a set starting gear piece */
 	for (i = 0; i < 8; i++) {
 		if (i < 3) {
 			cur_user->character->gear[i] = i + 1;
 			cur_user->character->skills[i] = i + 3 + 1;
+			cur_user->character->inventory[i] = i + 6 + 1;
+		} else {
+			cur_user->character->inventory[i] = 0;
 		}
-		cur_user->character->inventory[i] = 0;
 	}
+	/* END TEMPORARY */
+	
 }
 
 void
@@ -687,7 +691,7 @@ rando_name(char name[18])
 	char *consonants[] = { "b", "bl", "c", "cl", "cr", "d", "fl", "fr", "g", "gl",
 			       "gr", "h", "kl", "kr", "l", "ll", "m", "p", "pl",
 			       "pr", "s", "sl", "st", "t", "tr", "v", "w", "wr", "z", "zh" };
-	char *vowels[] = { "ae", "ai", "an", "ay", "e", "ee", "en", "i", "o", "on", "oo", "ou", "u", "y" };
+	char *vowels[] = { "ae", "ai", "ar", "ay", "e", "ee", "en", "i", "o", "on", "oo", "ou", "u", "y" };
 	int i;
 	
 	/* Empty out the string */
