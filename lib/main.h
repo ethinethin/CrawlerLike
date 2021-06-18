@@ -23,6 +23,7 @@ struct game {
 		SDL_Texture **floors;
 		SDL_Texture **icons;
 		SDL_Texture **gear;
+		SDL_Texture **junk;
 		SDL_Texture **arrows;
 		SDL_Texture **font;
 	} sprites;
@@ -48,6 +49,7 @@ struct map {
 	int rows;
 	int cols;
 	int **tiles;
+	int **junk;
 	struct coords start;
 	struct coords end;
 };

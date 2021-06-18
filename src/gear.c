@@ -171,7 +171,7 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 	if (item_coords[j].type == GEAR_TRASH) {
 		value = gear_value(*item_coords[i].slot);
 		if (value != -1) {
-			sprintf(message, "This will destroy the item. You will receive %d gold. Okay?", value);
+			sprintf(message, "This will destroy the item. Youwill receive %d gold. Okay?", value);
 			if (yes_no(cur_game, message, SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
 				cur_user->character->money += value;
 				del_gear(*item_coords[i].slot);

@@ -14,6 +14,7 @@ static int	maze_entrances(struct map *cur_map, int row, int col);
 static void	remove_wall(struct map *cur_map, int row, int col, int count);
 static int	count_rooms(struct map *cur_map);
 static void	make_dungeon(struct map *cur_map);
+static void	add_junk(struct map *cur_map);
 
 void
 init_map(struct map *cur_map, int rows, int cols)
@@ -25,14 +26,17 @@ init_map(struct map *cur_map, int rows, int cols)
 	cur_map->cols = cols;
 	/* Allocate memory and set to default grid values */
 	cur_map->tiles = malloc(sizeof(*cur_map->tiles) * rows);
+	cur_map->junk = malloc(sizeof(*cur_map->junk) * rows);
 	for (i = 0; i < rows; i++) {
 		*(cur_map->tiles + i) = malloc(sizeof(**cur_map->tiles) * cols);
+		*(cur_map->junk + i) = malloc(sizeof(*cur_map->junk) * cols);
 		for (j = 0; j < cols; j++) {
 			if (i % 2 == 1 && j % 2 == 1) {
 				*(*(cur_map->tiles + i) + j) = UNKNOWN;
 			} else {
 				*(*(cur_map->tiles + i) + j) = WALL;
 			}
+			*(*(cur_map->junk + i) + j) = 0;
 		}
 	}		
 }
@@ -45,8 +49,10 @@ kill_map(struct map *cur_map)
 	/* Free memory */
 	for (i = 0; i < cur_map->rows; i++) {
 		free(*(cur_map->tiles + i));
+		free(*(cur_map->junk + i));
 	}
 	free(cur_map->tiles);
+	free(cur_map->junk);
 }
 
 void
@@ -82,8 +88,9 @@ populate_map(struct map *cur_map, int row_start, int col_start)
 	*(*(cur_map->tiles + room->row) + room->col) = END;
 	cur_map->end.row = room->row;
 	cur_map->end.col = room->col;
-	/* Remove some random walls */
+	/* Remove some random walls, add doors, and add junk */
 	make_dungeon(cur_map);
+	add_junk(cur_map);
 	free(room);
 	/* Pick a random wall sprite */
 	cur_map->sprite = rand_num(0, 2);
@@ -222,4 +229,19 @@ make_dungeon(struct map *cur_map)
 			}
 		}
 	}
+}
+
+static void
+add_junk(struct map *cur_map)
+{	
+	int i, j;
+	
+	for (i = 0; i < cur_map->rows; i++) {
+		for (j = 0; j < cur_map->cols; j++) {
+			//if (*(*(cur_map->tiles + i) + j) == ROOM && rand_num(0, 99) >= 94) {
+			if (*(*(cur_map->tiles + i) + j) == ROOM) {
+				*(*(cur_map->junk + i) + j) = 1;
+			}
+		}
+	}	
 }

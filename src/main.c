@@ -28,6 +28,7 @@ struct game GAME = {
 	  NULL,		/* sprites.floors */
 	  NULL,		/* sprites.icons */
 	  NULL,		/* sprites.gear */
+	  NULL,		/* sprites.junk */
 	  NULL,		/* sprites.arrows */
 	  NULL },	/* sprites.font */
 	UNLOADED,	/* state */

@@ -85,13 +85,15 @@ turn_player(struct user *cur_user, int turn)
 void
 change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user)
 {
-	if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == START) {
+	int cur_level;
+	
+	cur_level = cur_user->map;
+	if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == START && cur_level != 0) {
 		cur_user->map -= 1;
-	} else if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == END) {
+	} else if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == END && cur_level < cur_game->num_maps - 1) {
 		cur_user->map += 1;
 	}
-	if (cur_user->map > cur_game->num_maps - 1) cur_user->map = cur_game->num_maps - 1;
-	if (cur_user->map < 0) cur_user->map = 0;
+	if (cur_level != cur_user->map) pass_time(cur_game);
 }
 
 static void

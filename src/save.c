@@ -166,9 +166,17 @@ save_map(struct game *cur_game)
 	/* Output each map */
 	for (map = 0; map < cur_game->num_maps; map++) {
 		fprintf(fp, "sprite=%d\n", cur_game->maps[map].sprite);
+		/* Output map */
 		for (i = 0; i < cur_game->maps[map].rows; i++) {
 			for (j = 0; j < cur_game->maps[map].cols; j++) {
 				fprintf(fp, "%d", *(*(cur_game->maps[map].tiles + i) + j));
+			}
+		}
+		fprintf(fp, "\n");
+		/* Output junk */
+		for (i = 0; i < cur_game->maps[map].rows; i++) {
+			for (j = 0; j < cur_game->maps[map].cols; j++) {
+				fprintf(fp, "%d ", *(*(cur_game->maps[map].junk + i) + j));
 			}
 		}
 		fprintf(fp, "\n");
@@ -200,9 +208,17 @@ load_map(struct game *cur_game)
 	for (map = 0; map < cur_game->num_maps; map++) {
 		init_map(&cur_game->maps[map], rows, cols);
 		fscanf(fp, "sprite=%d\n", &cur_game->maps[map].sprite);
+		/* input map */
 		for (i = 0; i < rows; i++) {
 			for (j = 0; j < cols; j++) {
 				*(*(cur_game->maps[map].tiles + i) + j) = fgetc(fp) - 48;
+			}
+		}
+		fscanf(fp, "\n", NULL);
+		/* input junk */
+		for (i = 0; i < rows; i++) {
+			for (j = 0; j < cols; j++) {
+				fscanf(fp, "%d ", *(cur_game->maps[map].junk + i) + j);
 			}
 		}
 		fscanf(fp, "\n", NULL);

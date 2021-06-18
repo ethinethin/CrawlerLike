@@ -114,9 +114,8 @@ prep_menu_items(struct menu_item *cur_menu)
 {
 	int i;
 	
-	/* If the menu has been processed already, return */
+	/* If the menu hasn't been prepped for clicking, prep it here */
 	if (cur_menu[0].rect.w != 0) return;
-	
 	for (i = 0; cur_menu[i].rect.x != -1; i++) {
 		cur_menu[i].rect.w = strlen(cur_menu[i].sentence) * 192 * cur_menu[i].scale;
 		cur_menu[i].rect.h = (int) (208.0 * cur_menu[i].scale);
@@ -470,7 +469,7 @@ draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sh
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
 		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
-		  SDL_TRUE, "black");
+		  SDL_TRUE, "darkblue");
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
 		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
@@ -537,7 +536,6 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 	cur_game->newgame = SDL_TRUE;
 	/* Game is now loaded and running */
 	cur_game->state = LOADED;
-	
 }
 
 static void

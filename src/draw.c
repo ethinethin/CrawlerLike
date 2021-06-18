@@ -71,6 +71,7 @@ load_sprites(struct game *cur_game)
 	cur_game->sprites.floors = load_image(cur_game, "art/floors.bmp", 3, 300, 230);
 	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 16, 50, 50);
 	cur_game->sprites.gear = load_image(cur_game, "art/gear.bmp", 9, 50, 50);
+	cur_game->sprites.junk = load_image(cur_game, "art/junk.bmp", 6, 64, 64);
 	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
 }
 
@@ -107,6 +108,7 @@ unload_sprites(struct game *cur_game)
 	unload_image(cur_game->sprites.floors, 3);
 	unload_image(cur_game->sprites.icons, 16);
 	unload_image(cur_game->sprites.gear, 9);
+	unload_image(cur_game->sprites.junk, 6);
 	unload_image(cur_game->sprites.arrows, 6);
 }
 
@@ -161,7 +163,6 @@ draw_line(struct game *cur_game, int x1, int y1, int x2, int y2, char *col)
 	
 	color = get_color(col);
 	SDL_SetRenderDrawColor(cur_game->display.renderer, color[0], color[1], color[2], 255);
-	SDL_SetRenderDrawColor(cur_game->display.renderer, 255, 255, 255, 255);
 	SDL_RenderDrawLine(cur_game->display.renderer, x1, y1, x2, y2);
 }
 

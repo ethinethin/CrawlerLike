@@ -10,8 +10,12 @@
 /* Function prototypes */
 static void	get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side);
 static void	set_walls(struct user *cur_user, struct coords walls[25]);
+static void	set_junk(struct user *cur_user, struct coords junk[9]);
 static void	check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25]);
+static void	check_junk(struct game *cur_game, struct user *cur_user, struct coords junk[9]);
 static void	draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, struct coords *wall_coords, int wall_num, int sprite_num);
+static void	draw_junk(struct game *cur_game, struct user *cur_user, SDL_Texture **junk, int junk_num);
+
 
 void
 draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
@@ -100,6 +104,17 @@ get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side
  *	XX XX XX  2 XX  3 XX  4 XX XX XX
  *	XX .. XX ..  0 pl  1 .. XX .. XX
  */
+ 
+ /* Key for junk (8 = pl):
+  *
+  *     XX XX XX XX XX XX XX XX XX XX XX
+  *     XX  0 XX  1 XX  2 XX  3 XX  4 XX
+  *     XX XX XX XX XX XX XX XX XX XX XX
+  *     XX .. XX  5 XX  6 XX  7 XX .. XX
+  *     XX XX XX XX XX XX XX XX XX XX XX
+  *     XX .. XX .. XX  8 XX .. XX .. XX
+  */
+
 static void
 set_walls(struct user *cur_user, struct coords walls[25])
 {
@@ -129,6 +144,20 @@ set_walls(struct user *cur_user, struct coords walls[25])
 	get_coords(cur_user, &walls[22], 5, 0);
 	get_coords(cur_user, &walls[23], 5, 2);
 	get_coords(cur_user, &walls[24], 5, 4);
+}
+
+static void
+set_junk(struct user *cur_user, struct coords junk[9])
+{
+	get_coords(cur_user, &junk[0], 4, -4);
+	get_coords(cur_user, &junk[1], 4, -2);
+	get_coords(cur_user, &junk[2], 4, 0);
+	get_coords(cur_user, &junk[3], 4, 2);
+	get_coords(cur_user, &junk[4], 4, 4);
+	get_coords(cur_user, &junk[5], 2, -2);
+	get_coords(cur_user, &junk[6], 2, 0);
+	get_coords(cur_user, &junk[7], 2, 2);
+	get_coords(cur_user, &junk[8], 0, 0);
 }
 
 static void
@@ -179,6 +208,38 @@ struct wall_dim {
 	{ 24, 0, SDL_FALSE, 192, { 651, 299, 125, 100 } }
 };
 
+struct junk_dim {
+	int junk_num;
+	int sprite;
+	int overlay;
+	SDL_Rect dim;
+} junk_dim[9] = {
+	{ 0, 0, 192, { 86, 367, 64, 64 } },
+	{ 1, 0, 192, { 275, 367, 64, 64 } },
+	{ 2, 0, 192, { 432, 367, 64, 64 } },
+	{ 3, 0, 192, { 589, 367, 64, 64 } },
+	{ 4, 0, 192, { 778, 367, 64, 64 } },
+	{ 5, 0, 128, { 117, 373, 128, 128 } }, 
+	{ 6, 0, 128, { 399, 373, 128, 128 } }, 
+	{ 7, 0, 128, { 681, 373, 128, 128 } },
+	{ 8, 0, 32, { 335, 421, 256, 256 } }
+};
+
+static void
+check_junk(struct game *cur_game, struct user *cur_user, struct coords junk[9])
+{
+	int i;
+	for (i = 0; i < 9; i++) {
+		if (junk[i].row < 0 || junk[i].row > cur_game->maps[cur_user->map].rows - 1 ||
+		    junk[i].col < 0 || junk[i].col > cur_game->maps[cur_user->map].cols - 1) {
+		    	/* Junk outside of range */
+			junk_dim[i].sprite = 0;
+		} else {
+			junk_dim[i].sprite = *(*(cur_game->maps[cur_user->map].junk + junk[i].row) + junk[i].col);
+		}
+	}
+}
+
 static void
 draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, struct coords *wall_coords, int wall_num, int sprite_num)
 {
@@ -227,13 +288,36 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 	}
 }
 
+static void
+draw_junk(struct game *cur_game, struct user *cur_user, SDL_Texture **junk, int junk_num)
+{
+	int x_val = 342;
+	int y_val = 11;
+	
+	if (junk_dim[junk_num].sprite != 0) {
+		draw_sprites(cur_game, junk, junk_dim[junk_num].sprite - 1 + 3,
+		junk_dim[junk_num].dim.x + x_val,
+		junk_dim[junk_num].dim.y + y_val,
+		junk_dim[junk_num].dim.w,
+		junk_dim[junk_num].dim.h,
+		255, SDL_FALSE);
+		draw_sprites(cur_game, junk, junk_dim[junk_num].sprite - 1,
+		junk_dim[junk_num].dim.x + x_val,
+		junk_dim[junk_num].dim.y + y_val,
+		junk_dim[junk_num].dim.w,
+		junk_dim[junk_num].dim.h,
+		junk_dim[junk_num].overlay, SDL_FALSE);
+	}
+}
+
 void
 draw_view(struct game *cur_game, struct user *cur_user)
 {
 	int i;
 	struct coords walls[25];
-	int draw_order[25] = { 20, 21, 22, 23, 24, 14, 15, 16, 17, 19, 18, 9, 10, 11, 12, 13, 5, 6, 7, 8, 2, 3, 4, 0, 1 };
-
+	struct coords junk[9];
+	int draw_order[25]     = { 20, 21, 22, 23, 24, 14, 15, 16, 17, 19, 18, 9, 10, 11, 12, 13, 5, 6, 7, 8, 2, 3, 4, 0, 1 };
+	int draw_order_junk[25] = { -1, 1, 2, 3, -1, 0, -1, -1, -1, 4, -1, -1, -1, 5, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 	/* Output to view texture and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.view);
 	SDL_SetRenderDrawColor(cur_game->display.renderer, 0, 0, 0, 255);
@@ -241,14 +325,21 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	/* Draw background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");
 	draw_sprites(cur_game, cur_game->sprites.floors, cur_game->maps[cur_user->map].sprite, 342, 11, 927, 698, 255, SDL_FALSE);
-	/* Determine values for all walls depending on user facing */
+	/* Determine values for all walls and junk depending on user facing */
 	set_walls(cur_user, walls);
-	/* Make sure the wall checks are within the map range */
+	set_junk(cur_user, junk);
+	/* Make sure the walls and junk are within the map range */
 	check_walls(cur_game, cur_user, walls);
-	/* Draw all walls */
+	check_junk(cur_game, cur_user, junk);
+	/* Draw all walls and junk */
 	for (i = 0; i < 25; i++) {
 		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], cur_game->maps[cur_user->map].sprite);
+		if (draw_order_junk[i] != -1) {
+			draw_junk(cur_game, cur_user, cur_game->sprites.junk, draw_order_junk[i]);
+		}
 	}
+	/* Draw junk on the player square */
+	draw_junk(cur_game, cur_user, cur_game->sprites.junk, 8);
 	/* Output white outline */
 	draw_rect(cur_game, 341, 10, 929, 700, SDL_FALSE, "white");
 	/* Reset the render target */
