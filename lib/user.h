@@ -51,7 +51,8 @@ enum dirs { NORTH, EAST, SOUTH, WEST };
 extern void		init_seen(struct seen *cur_seen, int rows, int cols);
 extern void		kill_seen(struct seen *cur_seen);
 extern void		update_seen(struct user *cur_user);
-extern SDL_bool		move_player(struct game *cur_game, struct user *cur_user, int move);
+extern SDL_bool		move_player(struct game *cur_game, struct user *cur_user, int dir);
+extern SDL_bool		strafe_player(struct game *cur_game, struct user *cur_user, int dir);
 extern void		turn_player(struct user *cur_user, int turn);
 extern void		change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user);
 

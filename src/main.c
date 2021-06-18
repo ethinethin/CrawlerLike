@@ -95,21 +95,27 @@ main()
 				case SDLK_ESCAPE: /* open title screen */
 					title(cur_game, cur_user);
 					break;
-				case SDLK_UP: /* move forward */
+				case SDLK_UP: 		/* move forward */
 				case SDLK_w:
 					move_player(cur_game, cur_user, 1);
 					break;
-				case SDLK_DOWN: /* move backward */
+				case SDLK_DOWN:		/* move backward */
 				case SDLK_s:
 					move_player(cur_game, cur_user, -1);
 					break;
-				case SDLK_LEFT: /* turn left */
-				case SDLK_a:
+				case SDLK_LEFT: 	/* turn left */
+				case SDLK_q:
 					turn_player(cur_user, -1);
 					break;
-				case SDLK_RIGHT: /* turn right */
-				case SDLK_d:
+				case SDLK_RIGHT:	/* turn right */
+				case SDLK_e:
 					turn_player(cur_user, 1);
+					break;
+				case SDLK_a:		/* strafe left */
+					strafe_player(cur_game, cur_user, -1);
+					break;
+				case SDLK_d:		/* strafe right */
+					strafe_player(cur_game, cur_user, 1);
 					break;
 				case SDLK_SPACE: /* change level */
 					change_level(cur_game, cur_game->maps + cur_user->map, cur_user);

@@ -180,6 +180,13 @@ save_map(struct game *cur_game)
 			}
 		}
 		fprintf(fp, "\n");
+		/* Output junk_face */
+		for (i = 0; i < cur_game->maps[map].rows; i++) {
+			for (j = 0; j < cur_game->maps[map].cols; j++) {
+				fprintf(fp, "%d", *(*(cur_game->maps[map].junk_face + i) + j));
+			}
+		}
+		fprintf(fp, "\n");
 	}
 	fclose(fp);
 }
@@ -222,6 +229,14 @@ load_map(struct game *cur_game)
 			}
 		}
 		fscanf(fp, "\n", NULL);
+		/* input junk_face */
+		for (i = 0; i < rows; i++) {
+			for (j = 0; j < cols; j++) {
+				*(*(cur_game->maps[map].junk_face + i) + j) = fgetc(fp) - 48;
+			}
+		}
+		fscanf(fp, "\n", NULL);
+
 	}
 	fclose(fp);
 }

@@ -27,9 +27,11 @@ init_map(struct map *cur_map, int rows, int cols)
 	/* Allocate memory and set to default grid values */
 	cur_map->tiles = malloc(sizeof(*cur_map->tiles) * rows);
 	cur_map->junk = malloc(sizeof(*cur_map->junk) * rows);
+	cur_map->junk_face = malloc(sizeof(*cur_map->junk_face) * rows);
 	for (i = 0; i < rows; i++) {
 		*(cur_map->tiles + i) = malloc(sizeof(**cur_map->tiles) * cols);
 		*(cur_map->junk + i) = malloc(sizeof(*cur_map->junk) * cols);
+		*(cur_map->junk_face + i) = malloc(sizeof(*cur_map->junk_face) * rows);
 		for (j = 0; j < cols; j++) {
 			if (i % 2 == 1 && j % 2 == 1) {
 				*(*(cur_map->tiles + i) + j) = UNKNOWN;
@@ -37,6 +39,7 @@ init_map(struct map *cur_map, int rows, int cols)
 				*(*(cur_map->tiles + i) + j) = WALL;
 			}
 			*(*(cur_map->junk + i) + j) = 0;
+			*(*(cur_map->junk_face + i) + j) = 0;
 		}
 	}		
 }
@@ -50,9 +53,11 @@ kill_map(struct map *cur_map)
 	for (i = 0; i < cur_map->rows; i++) {
 		free(*(cur_map->tiles + i));
 		free(*(cur_map->junk + i));
+		free(*(cur_map->junk_face + i));
 	}
 	free(cur_map->tiles);
 	free(cur_map->junk);
+	free(cur_map->junk_face);
 }
 
 void
@@ -235,12 +240,20 @@ static void
 add_junk(struct map *cur_map)
 {	
 	int i, j;
+	int facing;
+	int row_d[4] = { -1, 0, 1, 0 };
+	int col_d[4] = { 0, 1, 0, -1 };
 	
 	for (i = 0; i < cur_map->rows; i++) {
 		for (j = 0; j < cur_map->cols; j++) {
-			//if (*(*(cur_map->tiles + i) + j) == ROOM && rand_num(0, 99) >= 94) {
-			if (*(*(cur_map->tiles + i) + j) == ROOM) {
+			if (*(*(cur_map->tiles + i) + j) == ROOM && rand_num(0, 99) >= 94) {
 				*(*(cur_map->junk + i) + j) = 1;
+				facing = rand_num(NORTH, WEST);
+				*(*(cur_map->junk_face + i) + j) = facing;
+				while (*(*(cur_map->tiles + i + row_d[facing]) + j + col_d[facing]) == WALL) {
+					facing = rand_num(NORTH, WEST);
+					*(*(cur_map->junk_face + i) + j) = facing;
+				}
 			}
 		}
 	}	

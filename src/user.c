@@ -7,7 +7,8 @@
 #include "user.h"
 
 /* Function prototypes */
-static void	pass_time(struct game *cur_game);
+static SDL_bool		handle_move(struct game *cur_game, struct user *cur_user, int row_d, int col_d, int dir);
+static void		pass_time(struct game *cur_game);
 
 void
 init_seen(struct seen *cur_seen, int rows, int cols)
@@ -46,10 +47,9 @@ update_seen(struct user *cur_user)
 }
 
 SDL_bool
-move_player(struct game *cur_game, struct user *cur_user, int move)
+move_player(struct game *cur_game, struct user *cur_user, int dir)
 {
 	int row_d, col_d;
-	struct map *cur_map;
 		
 	/* Set the direction to be changed based on facing direction */
 	row_d = 0;
@@ -58,20 +58,46 @@ move_player(struct game *cur_game, struct user *cur_user, int move)
 	if (cur_user->facing == EAST) col_d = 1;
 	if (cur_user->facing == SOUTH) row_d = 1;
 	if (cur_user->facing == WEST) col_d = -1;
-	/* Point to the right map */
+	/* Handle move */
+	return handle_move(cur_game, cur_user, row_d, col_d, dir);
+}
+
+SDL_bool
+strafe_player(struct game *cur_game, struct user *cur_user, int dir)
+{
+	int row_d, col_d;
+		
+	/* Set the movement to be made based on facing direction */
+	row_d = 0;
+	col_d = 0;
+	if (cur_user->facing == NORTH) col_d = 1;
+	if (cur_user->facing == EAST) row_d = 1;
+	if (cur_user->facing == SOUTH) col_d = -1;
+	if (cur_user->facing == WEST) row_d = -1;
+	/* Handle move */
+	return handle_move(cur_game, cur_user, row_d, col_d, dir);
+}
+
+static SDL_bool
+handle_move(struct game *cur_game, struct user *cur_user, int row_d, int col_d, int dir)
+{
+	struct map *cur_map;
+	
+	/* Point to the current map */
 	cur_map =  cur_game->maps + cur_user->map;
-	/* Multiply by move, which is negative 1 if the player is backing up */
-	row_d *= move;
-	col_d *= move;
-	/* See if the move is okay */
+	/* Alter if moving backwards or strafing left */
+	row_d *= dir;
+	col_d *= dir;
+	/* See if the move is okay and make it */
 	if (*(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == ROOM ||
 	    *(*(cur_map->tiles + cur_user->row + row_d) + cur_user->col + col_d) == DOOR) {
 		cur_user->row += row_d * 2;
 		cur_user->col += col_d * 2;
 		pass_time(cur_game);
 		return SDL_TRUE;
+	} else {
+		return SDL_FALSE;
 	}
-	return SDL_FALSE;
 }
 
 void

@@ -50,6 +50,7 @@ struct map {
 	int cols;
 	int **tiles;
 	int **junk;
+	int **junk_face;
 	struct coords start;
 	struct coords end;
 };
