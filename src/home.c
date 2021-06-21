@@ -32,8 +32,8 @@ static void		new_click(struct game *cur_game, struct user *cur_user, int *whichs
 static void		draw_options(struct game *cur_game);
 static void		options_click(struct game *cur_game, int x, int y, int *whichscreen);
 static SDL_bool		change_resolution(struct game *cur_game, int w, int h);
-static void		draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet);
-static int		yesno_click(int x, int y);
+static void		draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet, SDL_bool msgbox);
+static int		yesno_click(int x, int y, SDL_bool msgbox);
 static void		new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim_row, int map_dim_col);
 static void		exit_game(struct game *cur_game, struct user *cur_user);
 
@@ -70,7 +70,7 @@ title(struct game *cur_game, struct user *cur_user)
 				if (cur_game->state == UNLOADED) {
 					loop = SDL_FALSE;
 					cur_game->running = SDL_FALSE;
-				} else if (yes_no(cur_game, "Save and quit game in progress?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				} else if (yes_no(cur_game, "Save and quit game in progress?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					save_all(cur_game, cur_user);
 					exit_game(cur_game, cur_user);
 					cur_game->running = SDL_FALSE;
@@ -194,12 +194,12 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 			if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
 				*whichscreen = NEWGAME;
 			} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
-				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
@@ -219,7 +219,7 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				cur_game->running = SDL_FALSE;
 				*whichscreen = GAMESCREEN;
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?", SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					save_all(cur_game, cur_user);
 					cur_game->running = SDL_FALSE;
 					exit_game(cur_game, cur_user);
@@ -400,7 +400,7 @@ change_resolution(struct game *cur_game, int w, int h)
 }
 
 SDL_bool
-yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
+yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet, SDL_bool msgbox)
 {
 	SDL_Event event;
 	SDL_bool loop;
@@ -409,10 +409,9 @@ yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
 	loop = SDL_TRUE;
 	while (loop == SDL_TRUE) {
 		/* draw yesno screen - this renders a yes no box on top of the previously rendered window */
-		draw_yesno(cur_game, message, view, char_sheet);
-		SDL_Delay(10);
-		/* poll for an event */
-		if (SDL_PollEvent(&event) == 0) continue;
+		draw_yesno(cur_game, message, view, char_sheet, msgbox);
+		/* Wait for an event */
+		SDL_WaitEvent(&event);
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 				case SDLK_y:
@@ -430,7 +429,7 @@ yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
 			}
 		} else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
 			answer = yesno_click(event.button.x / cur_game->display.scale_w,
-					     event.button.y / cur_game->display.scale_h);
+					     event.button.y / cur_game->display.scale_h, msgbox);
 			if (answer == RESULTS_NULL) continue;
 			loop = SDL_FALSE;
 		}
@@ -443,7 +442,7 @@ yes_no(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
 }
 
 static void
-draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet)
+draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sheet, SDL_bool msgbox)
 {
 	SDL_Rect out_src = { 0, 0, 1280, 720 };
 	SDL_Rect out_dest = { 0, 0, cur_game->display.w, cur_game->display.h };
@@ -469,28 +468,33 @@ draw_yesno(struct game *cur_game, char *message, SDL_bool view, SDL_bool char_sh
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
 		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
-		  SDL_TRUE, "darkblue");
+		  SDL_TRUE, "lightblue");
 	draw_rect(cur_game,
 		  340 * cur_game->display.scale_w, 240 * cur_game->display.scale_h,
 		  600 * cur_game->display.scale_w, 170 * cur_game->display.scale_h,
 		  SDL_FALSE, "white");
 	draw_sentence_xlimited(cur_game, 350 * cur_game->display.scale_w, 250 * cur_game->display.scale_h, message,
 			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
-	draw_sentence_xlimited(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Yes",
-			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
-	draw_sentence_xlimited(cur_game, 680 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "No",
-			       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+	if (msgbox == SDL_TRUE) {
+		draw_sentence_xlimited(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Okay",
+				       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+	} else {
+		draw_sentence_xlimited(cur_game, 480 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "Yes",
+				       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+		draw_sentence_xlimited(cur_game, 680 * cur_game->display.scale_w, 380 * cur_game->display.scale_h, "No",
+				       0.1 * cur_game->display.scale_w, (340 + 600) * cur_game->display.scale_w);
+	}
 	/* Present */
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
 static int
-yesno_click(int x, int y)
+yesno_click(int x, int y, SDL_bool msgbox)
 {
 	if (y >= 380 && y < 400) {
-		if (x >= 480 & x < 534) {
+		if (x >= 480 && x < 552) {
 			return RESULTS_YES;
-		} else if (x >= 680 & x < 725) {
+		} else if (x >= 680 && x < 725 && msgbox == SDL_FALSE) {
 			return RESULTS_NO;
 		}
 	}

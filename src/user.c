@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "draw.h"
 #include "font.h"
+#include "gear.h"
 #include "home.h"
 #include "main.h"
 #include "rand.h"
@@ -8,6 +9,8 @@
 
 /* Function prototypes */
 static SDL_bool		handle_move(struct game *cur_game, struct user *cur_user, int row_d, int col_d, int dir);
+static void		open_chest(struct game *cur_game, struct user *cur_user);
+static void		change_level(struct game *cur_game, struct user *cur_user);
 static void		pass_time(struct game *cur_game);
 
 void
@@ -109,10 +112,48 @@ turn_player(struct user *cur_user, int turn)
 }
 
 void
-change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user)
+take_action(struct game *cur_game, struct user *cur_user)
+{
+	int junk;
+	int room;
+	
+	/* Figure out room contents and room type */
+	junk = *(*((cur_game->maps + cur_user->map)->junk + cur_user->row) + cur_user->col);
+	room = *(*((cur_game->maps + cur_user->map)->tiles + cur_user->row) + cur_user->col);
+	/* Are we on top of a chest? */
+	if (junk != 0 ) {
+		open_chest(cur_game, cur_user);
+	} else if (room == START || room == END) {
+		change_level(cur_game, cur_user);
+	}
+}
+
+static void
+open_chest(struct game *cur_game, struct user *cur_user)
+{
+	int i;
+	
+	/* Make sure inventory has space */
+	for (i = 0; i < 8; i++) {
+		if (cur_user->character->inventory[i] == 0) break;
+	}
+	if (i == 8) {
+		yes_no(cur_game, "Your inventory is full. You cannot open the chest.", SDL_TRUE, SDL_FALSE, SDL_TRUE);
+		return;
+	}
+	/* Generate random gear based on floor and put in inventory */
+	cur_user->character->inventory[i] = create_gear(cur_user->map + 1);
+	/* Get rid of chest */
+	*(*((cur_game->maps + cur_user->map)->junk + cur_user->row) + cur_user->col) = 0;
+}
+
+static void
+change_level(struct game *cur_game, struct user *cur_user)
 {
 	int cur_level;
+	struct map *cur_map;
 	
+	cur_map = cur_game->maps + cur_user->map;	
 	cur_level = cur_user->map;
 	if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == START && cur_level != 0) {
 		cur_user->map -= 1;

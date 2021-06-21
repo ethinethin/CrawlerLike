@@ -250,7 +250,7 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 			switch (event.key.keysym.sym) {
 				case SDLK_ESCAPE:
 					if (changes == SDL_TRUE) {
-						if (yes_no(cur_game, "Abandon changes?", SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+						if (yes_no(cur_game, "Abandon changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 							/* Niclear option - return out of loop, changes will be lost */
 							return;
 						}
@@ -260,7 +260,7 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 					break;
 				case SDLK_RETURN:
 					if (changes == SDL_FALSE ||
-					    yes_no(cur_game, "Finalize character changes?", SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+					    yes_no(cur_game, "Finalize character changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 					    	/* Break loop, changes will be kept */
 						loop = SDL_FALSE;
 						break;
@@ -277,13 +277,13 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 				loop = SDL_FALSE;
 			} else if (results == CLICK_YES && changes == SDL_TRUE) {
 				/* Accept changes? */
-				if (yes_no(cur_game, "Finalize character changes?", SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Finalize character changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 					/* Break loop - changes will be committed */
 					loop = SDL_FALSE;
 				}
 			} else if (results == CLICK_CANCEL && changes == SDL_TRUE) {
 				/* Abandon all change? */
-				if (yes_no(cur_game, "Abandon changes?", SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Abandon changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 					/* Nuclear option - return out of loop, changes will be lost */
 					return;
 				}

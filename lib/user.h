@@ -54,6 +54,6 @@ extern void		update_seen(struct user *cur_user);
 extern SDL_bool		move_player(struct game *cur_game, struct user *cur_user, int dir);
 extern SDL_bool		strafe_player(struct game *cur_game, struct user *cur_user, int dir);
 extern void		turn_player(struct user *cur_user, int turn);
-extern void		change_level(struct game *cur_game, struct map *cur_map, struct user *cur_user);
+extern void		take_action(struct game *cur_game, struct user *cur_user);
 
 #endif

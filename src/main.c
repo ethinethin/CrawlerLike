@@ -92,7 +92,7 @@ main()
 			redraw = SDL_TRUE;
 		} else if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
-				case SDLK_ESCAPE: /* open title screen */
+				case SDLK_ESCAPE: 	/* open title screen */
 					title(cur_game, cur_user);
 					break;
 				case SDLK_UP: 		/* move forward */
@@ -117,10 +117,10 @@ main()
 				case SDLK_d:		/* strafe right */
 					strafe_player(cur_game, cur_user, 1);
 					break;
-				case SDLK_SPACE: /* change level */
-					change_level(cur_game, cur_game->maps + cur_user->map, cur_user);
+				case SDLK_SPACE:	 /* change level */
+					take_action(cur_game, cur_user);
 					break;
-				case SDLK_c: /* character screen */
+				case SDLK_c: 		/* character screen */
 					char_screen(cur_game, cur_user, SDL_TRUE);
 					break;
 			}

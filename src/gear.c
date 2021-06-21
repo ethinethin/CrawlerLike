@@ -5,6 +5,7 @@
 #include "home.h"
 #include "gear.h"
 #include "main.h"
+#include "rand.h"
 #include "user.h"
 
 /* Function prototypes */
@@ -154,7 +155,7 @@ draw_drag(struct game *cur_game, SDL_Rect *mouse, int i)
 	/* Draw empty slot over the icon - need to scale its location and size because it's being rendered directly */
 	draw_sprites(cur_game, cur_game->sprites.icons, item_coords[i].empty, (item_coords[i].coords.x + 64) * cur_game->display.scale_w, (item_coords[i].coords.y + 36) * cur_game->display.scale_h, item_coords[i].coords.w * cur_game->display.scale_w, item_coords[i].coords.h * cur_game->display.scale_h, 255, SDL_FALSE);
 	/* Draw icon for item being dragged - also scaled*/
-	draw_sprites(cur_game, cur_game->sprites.gear, *item_coords[i].slot - 1, (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.gear, gear_sprite(*item_coords[i].slot) - 1, (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
@@ -172,7 +173,7 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 		value = gear_value(*item_coords[i].slot);
 		if (value != -1) {
 			sprintf(message, "This will destroy the item. Youwill receive %d gold. Okay?", value);
-			if (yes_no(cur_game, message, SDL_TRUE, SDL_TRUE) == SDL_TRUE) {
+			if (yes_no(cur_game, message, SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 				cur_user->character->money += value;
 				del_gear(*item_coords[i].slot);
 				*item_coords[i].slot = 0;
@@ -243,7 +244,7 @@ kill_gear(void)
 	free(tmp);
 }
 
-void
+int
 add_gear(int id, int sprite, int type, int level, int value, struct stats *mods)
 {
 	struct gear *tmp;
@@ -269,6 +270,8 @@ add_gear(int id, int sprite, int type, int level, int value, struct stats *mods)
 		tmp = tmp->next;
 	}
 	tmp->next = new_gear;
+	/* Return item id */
+	return new_gear->id;
 }
 
 void
@@ -414,4 +417,17 @@ undump_gear(FILE *fp)
 		fscanf(fp, "  mods.avoid=%d\n", &tmp.mods.avoid);
 		add_gear(tmp.id, tmp.sprite, tmp.type, tmp.level, tmp.value, &tmp.mods);
 	}
+}
+
+int
+create_gear(int level)
+{
+	int i;
+	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
+	struct stats mods;
+
+	/* Temporary - make starting gear */
+	i = rand_num(1, 9);
+	zero_stats(&mods);
+	return add_gear(0, i, types[i - 1], level, 10, &mods);
 }

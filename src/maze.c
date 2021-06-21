@@ -244,8 +244,8 @@ add_junk(struct map *cur_map)
 	int row_d[4] = { -1, 0, 1, 0 };
 	int col_d[4] = { 0, 1, 0, -1 };
 	
-	for (i = 0; i < cur_map->rows; i++) {
-		for (j = 0; j < cur_map->cols; j++) {
+	for (i = 1; i < cur_map->rows; i += 2) {
+		for (j = 1; j < cur_map->cols; j += 2) {
 			if (*(*(cur_map->tiles + i) + j) == ROOM && rand_num(0, 99) >= 94) {
 				*(*(cur_map->junk + i) + j) = 1;
 				facing = rand_num(NORTH, WEST);
