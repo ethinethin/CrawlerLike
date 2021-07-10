@@ -194,12 +194,12 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 			if (cur_game->state == UNLOADED && save_exists == SDL_FALSE) {
 				*whichscreen = NEWGAME;
 			} else if (cur_game->state == UNLOADED && save_exists == SDL_TRUE) {
-				if (yes_no(cur_game, "Starting a new game will erase\nthe current quicksave.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Starting a new game will erase the current quicksave.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Game in progress will be erasedto start a new game.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Game in progress will be erased to start a new game.\n\nIs this okay?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					*whichscreen = NEWGAME;
 					return;
 				}
@@ -219,7 +219,7 @@ title_click(struct game *cur_game, struct user *cur_user, int x, int y, int *whi
 				cur_game->running = SDL_FALSE;
 				*whichscreen = GAMESCREEN;
 			} else if (cur_game->state == LOADED) {
-				if (yes_no(cur_game, "Save game in progress to the\nquicksave slot and exit?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
+				if (yes_no(cur_game, "Save game in progress to the quicksave slot and exit?", SDL_FALSE, SDL_FALSE, SDL_FALSE) == SDL_TRUE) {
 					save_all(cur_game, cur_user);
 					cur_game->running = SDL_FALSE;
 					exit_game(cur_game, cur_user);

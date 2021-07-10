@@ -13,7 +13,7 @@ static void	name_char(struct game *cur_game, struct user *cur_user);
 static void	draw_name(struct game *cur_game, char buffer[18]);
 static SDL_bool	changes_made(struct user *cur_user, int points[2]);
 static void	point_to_stats(struct user *cur_user, struct stats *temp_stats[3], int points[2]);
-static void	draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, struct stats *temp_stats[3], int points[2]);
+static void	draw_char_screen(struct game *cur_game, struct user *cur_user, struct stats *temp_stats[3], int points[2]);
 static void	point_to_arrows(struct stats *temp_stats[3]);
 static void	draw_stat_arrows(struct game *cur_game, struct stats *temp_stats[3], int points[2]);
 static void	draw_gear(struct game *cur_game, struct user *cur_user);
@@ -30,6 +30,10 @@ init_char(struct game *cur_game, struct user *cur_user)
 	/* Make a new character with default stats */
 	cur_user->character = malloc(sizeof(*cur_user->character));
 	cur_user->character->name = malloc(sizeof(*cur_user->character->name)*17);
+	/* Zero out stats */
+	zero_stats(&cur_user->character->cur_stats);
+	zero_stats(&cur_user->character->max_stats);
+	zero_stats(&cur_user->character->mod_stats);
 	name_char(cur_game, cur_user);
 	cur_user->character->level = 1;
 	cur_user->character->major_points = 5;
@@ -40,12 +44,12 @@ init_char(struct game *cur_game, struct user *cur_user)
 	cur_user->character->cur_stats.magic = 10;
 	cur_user->character->cur_stats.experience = 0;
 	/* Allocate 10 to each minor stat */
-	cur_user->character->cur_stats.attack = 10;
-	cur_user->character->cur_stats.defense = 10;
-	cur_user->character->cur_stats.dodge = 10;
-	cur_user->character->cur_stats.power = 10;
-	cur_user->character->cur_stats.spirit = 10;
-	cur_user->character->cur_stats.avoid = 10;
+	cur_user->character->mod_stats.attack = 10;
+	cur_user->character->mod_stats.defense = 10;
+	cur_user->character->mod_stats.dodge = 10;
+	cur_user->character->mod_stats.power = 10;
+	cur_user->character->mod_stats.spirit = 10;
+	cur_user->character->mod_stats.avoid = 10;
 	/* Allocate 10 to each major stat */
 	cur_user->character->max_stats.life = 10;
 	cur_user->character->max_stats.stamina = 10;
@@ -217,7 +221,7 @@ draw_name(struct game *cur_game, char buffer[18])
 
 enum char_clicks { CLICK_NULL, CLICK_STAT, CLICK_YES, CLICK_CANCEL };
 void
-char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
+char_screen(struct game *cur_game, struct user *cur_user)
 {
 	int points[2];
 	int x, y;
@@ -226,19 +230,17 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 	SDL_bool changes;
 	SDL_Event event;
 	struct stats increase;
-	struct stats cur_increase;
-	struct stats max_increase;
-	struct stats *temp_stats[3] = { &increase, &cur_increase, &max_increase };
+	struct stats *temp_stats[4] = { &increase,
+					&cur_user->character->cur_stats,
+					&cur_user->character->max_stats,
+					&cur_user->character->mod_stats };
 	
 	/* Zero out increase and allocate points */
 	zero_stats(&increase);
 	points[0] = cur_user->character->major_points;
 	points[1] = cur_user->character->minor_points;
-	/* Copy character structures */
-	copy_stats(&cur_user->character->cur_stats, &cur_increase);
-	copy_stats(&cur_user->character->max_stats, &max_increase);
 	/* Draw the screen */
-	draw_char_screen(cur_game, cur_user, ingame, temp_stats, points);
+	draw_char_screen(cur_game, cur_user, temp_stats, points);
 	
 	/* Input loop */
 	loop = SDL_TRUE;
@@ -273,30 +275,43 @@ char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame)
 			y = (event.button.y) / cur_game->display.scale_h - 36;
 			results = char_screen_click(cur_game, cur_user, points, x, y);
 			if ((results == CLICK_YES || results == CLICK_CANCEL) && changes == SDL_FALSE) {
-				/* No changes, just break loop */
-				loop = SDL_FALSE;
+				/* No changes, return out of function */
+				return;
 			} else if (results == CLICK_YES && changes == SDL_TRUE) {
 				/* Accept changes? */
 				if (yes_no(cur_game, "Finalize character changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
-					/* Break loop - changes will be committed */
-					loop = SDL_FALSE;
+					/* Commit changes and return */
+					cur_user->character->major_points = points[0];
+					cur_user->character->minor_points = points[1];
+					return;
 				}
 			} else if (results == CLICK_CANCEL && changes == SDL_TRUE) {
 				/* Abandon all change? */
 				if (yes_no(cur_game, "Abandon changes?", SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
-					/* Nuclear option - return out of loop, changes will be lost */
-					return;
+					/* Nuclear option - break out of the loop to undo changes */
+					loop = SDL_FALSE;
 				}
 			}
 		}
 		/* Only output the screen if the user gave input */
-		draw_char_screen(cur_game, cur_user, ingame, temp_stats, points);
+		draw_char_screen(cur_game, cur_user, temp_stats, points);
 	}
-	/* Copy stat changes to the character */
-	copy_stats(&cur_increase, &cur_user->character->cur_stats);
-	copy_stats(&max_increase, &cur_user->character->max_stats);
-	cur_user->character->major_points = points[0];
-	cur_user->character->minor_points = points[1];
+	/* Uncommit changes */
+	cur_user->character->max_stats.life -= increase.life;
+	cur_user->character->max_stats.stamina -= increase.stamina;
+	cur_user->character->max_stats.magic -= increase.magic;
+	cur_user->character->mod_stats.attack -= increase.attack;
+	cur_user->character->max_stats.attack -= increase.attack;
+	cur_user->character->mod_stats.defense -= increase.defense;
+	cur_user->character->max_stats.defense -= increase.defense;
+	cur_user->character->mod_stats.dodge -= increase.dodge;
+	cur_user->character->max_stats.dodge -= increase.dodge;
+	cur_user->character->mod_stats.power -= increase.power;
+	cur_user->character->max_stats.power -= increase.power;
+	cur_user->character->mod_stats.spirit -= increase.spirit;
+	cur_user->character->max_stats.spirit -= increase.spirit;
+	cur_user->character->mod_stats.avoid -= increase.avoid;
+	cur_user->character->max_stats.avoid -= increase.avoid;
 }
 
 void
@@ -405,16 +420,16 @@ point_to_stats(struct user *cur_user, struct stats *temp_stats[3], int points[2]
 	char_screen_stats[11].val1 = &temp_stats[1]->magic; char_screen_stats[11].val2 = &temp_stats[2]->magic;
 	char_screen_stats[12].val1 = &cur_user->character->cur_stats.experience; char_screen_stats[12].val2 = &cur_user->character->max_stats.experience; 
 	char_screen_stats[13].val1 = &points[1];
-	char_screen_stats[14].val1 = &temp_stats[1]->attack; char_screen_stats[14].val2 = &temp_stats[2]->attack;
-	char_screen_stats[15].val1 = &temp_stats[1]->defense; char_screen_stats[15].val2 = &temp_stats[2]->defense;
-	char_screen_stats[16].val1 = &temp_stats[1]->dodge; char_screen_stats[16].val2 = &temp_stats[2]->dodge;
-	char_screen_stats[17].val1 = &temp_stats[1]->power; char_screen_stats[17].val2 = &temp_stats[2]->power;
-	char_screen_stats[18].val1 = &temp_stats[1]->spirit; char_screen_stats[18].val2 = &temp_stats[2]->spirit;
-	char_screen_stats[19].val1 = &temp_stats[1]->avoid; char_screen_stats[19].val2 = &temp_stats[2]->avoid;
+	char_screen_stats[14].val1 = &temp_stats[3]->attack; char_screen_stats[14].val2 = &temp_stats[2]->attack;
+	char_screen_stats[15].val1 = &temp_stats[3]->defense; char_screen_stats[15].val2 = &temp_stats[2]->defense;
+	char_screen_stats[16].val1 = &temp_stats[3]->dodge; char_screen_stats[16].val2 = &temp_stats[2]->dodge;
+	char_screen_stats[17].val1 = &temp_stats[3]->power; char_screen_stats[17].val2 = &temp_stats[2]->power;
+	char_screen_stats[18].val1 = &temp_stats[3]->spirit; char_screen_stats[18].val2 = &temp_stats[2]->spirit;
+	char_screen_stats[19].val1 = &temp_stats[3]->avoid; char_screen_stats[19].val2 = &temp_stats[2]->avoid;
 }
 
 static void
-draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, struct stats *temp_stats[3], int points[2])
+draw_char_screen(struct game *cur_game, struct user *cur_user, struct stats *temp_stats[3], int points[2])
 {
 	char line[100];
 	int i;
@@ -460,10 +475,8 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, SDL_bool ingame, 
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	SDL_RenderClear(cur_game->display.renderer);
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.output, &out_src, &out_dest);
-	/* Output view if ingame */
-	if (cur_game->display.view != NULL && ingame == SDL_TRUE) {
-		SDL_RenderCopy(cur_game->display.renderer, cur_game->display.view, &view_src, &view_dest);
-	}
+	/* Output view */
+	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.view, &view_src, &view_dest);
 	/* Output character screen */
 	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.char_screen_tex, &screen_src, &screen_dest);
 	SDL_RenderPresent(cur_game->display.renderer);
@@ -505,22 +518,22 @@ point_to_arrows(struct stats *temp_stats[3])
 	arrows[2].val2 = &temp_stats[1]->magic;		arrows[11].val2 = &temp_stats[1]->magic;
 	arrows[2].val3 = &temp_stats[2]->magic;		arrows[11].val3 = &temp_stats[2]->magic;
 	arrows[3].val1 = &temp_stats[0]->attack;	arrows[12].val1 = &temp_stats[0]->attack;
-	arrows[3].val2 = &temp_stats[1]->attack;	arrows[12].val2 = &temp_stats[1]->attack;
+	arrows[3].val2 = &temp_stats[3]->attack;	arrows[12].val2 = &temp_stats[3]->attack;
 	arrows[3].val3 = &temp_stats[2]->attack;	arrows[12].val3 = &temp_stats[2]->attack;
 	arrows[4].val1 = &temp_stats[0]->defense;	arrows[13].val1 = &temp_stats[0]->defense;
-	arrows[4].val2 = &temp_stats[1]->defense;	arrows[13].val2 = &temp_stats[1]->defense;
+	arrows[4].val2 = &temp_stats[3]->defense;	arrows[13].val2 = &temp_stats[3]->defense;
 	arrows[4].val3 = &temp_stats[2]->defense;	arrows[13].val3 = &temp_stats[2]->defense;
 	arrows[5].val1 = &temp_stats[0]->dodge;		arrows[14].val1 = &temp_stats[0]->dodge;
-	arrows[5].val2 = &temp_stats[1]->dodge;		arrows[14].val2 = &temp_stats[1]->dodge;
+	arrows[5].val2 = &temp_stats[3]->dodge;		arrows[14].val2 = &temp_stats[3]->dodge;
 	arrows[5].val3 = &temp_stats[2]->dodge;		arrows[14].val3 = &temp_stats[2]->dodge;
 	arrows[6].val1 = &temp_stats[0]->power;		arrows[15].val1 = &temp_stats[0]->power;
-	arrows[6].val2 = &temp_stats[1]->power;		arrows[15].val2 = &temp_stats[1]->power;
+	arrows[6].val2 = &temp_stats[3]->power;		arrows[15].val2 = &temp_stats[3]->power;
 	arrows[6].val3 = &temp_stats[2]->power;		arrows[15].val3 = &temp_stats[2]->power;
 	arrows[7].val1 = &temp_stats[0]->spirit;	arrows[16].val1 = &temp_stats[0]->spirit;
-	arrows[7].val2 = &temp_stats[1]->spirit;	arrows[16].val2 = &temp_stats[1]->spirit;
+	arrows[7].val2 = &temp_stats[3]->spirit;	arrows[16].val2 = &temp_stats[3]->spirit;
 	arrows[7].val3 = &temp_stats[2]->spirit;	arrows[16].val3 = &temp_stats[2]->spirit;
 	arrows[8].val1 = &temp_stats[0]->avoid;		arrows[17].val1 = &temp_stats[0]->avoid;
-	arrows[8].val2 = &temp_stats[1]->avoid;		arrows[17].val2 = &temp_stats[1]->avoid;
+	arrows[8].val2 = &temp_stats[3]->avoid;		arrows[17].val2 = &temp_stats[3]->avoid;
 	arrows[8].val3 = &temp_stats[2]->avoid;		arrows[17].val3 = &temp_stats[2]->avoid;
 }
 
@@ -704,3 +717,46 @@ rando_name(char name[18])
 	/* Make first letter uppercase */
 	name[0] -= 32;
 }	
+
+void
+update_stats(struct user *cur_user)
+{
+	int i;
+	struct stats *mods_gear;
+	struct stats *mods_skills;
+	struct stats empty;
+	
+	/* Subtract major modifiers from major max */
+	cur_user->character->max_stats.life -= cur_user->character->mod_stats.life;
+	cur_user->character->max_stats.stamina -= cur_user->character->mod_stats.stamina;
+	cur_user->character->max_stats.magic -= cur_user->character->mod_stats.magic;
+	/* Zero out major stat modifiers and reset minor stat modifiers */
+	cur_user->character->mod_stats.life = 0;
+	cur_user->character->mod_stats.stamina = 0;
+	cur_user->character->mod_stats.magic = 0;
+	cur_user->character->mod_stats.attack = cur_user->character->max_stats.attack;
+	cur_user->character->mod_stats.defense = cur_user->character->max_stats.defense;
+	cur_user->character->mod_stats.dodge = cur_user->character->max_stats.dodge;
+	cur_user->character->mod_stats.power = cur_user->character->max_stats.power;
+	cur_user->character->mod_stats.spirit = cur_user->character->max_stats.spirit;
+	cur_user->character->mod_stats.avoid = cur_user->character->max_stats.avoid;
+	/* Go through each gear/skill slot and add stats to cur_stats */
+	zero_stats(&empty);
+	for (i = 0; i < 3; i += 1) {
+		mods_gear = cur_user->character->gear[i] == 0 ? &empty : gear_stats(cur_user->character->gear[i]);
+		mods_skills = cur_user->character->skills[i] == 0 ? &empty : gear_stats(cur_user->character->skills[i]);
+		cur_user->character->mod_stats.life += mods_gear->life + mods_skills->life;
+		cur_user->character->mod_stats.stamina += mods_gear->stamina + mods_skills->stamina;
+		cur_user->character->mod_stats.magic += mods_gear->magic + mods_skills->magic;
+		cur_user->character->mod_stats.attack += mods_gear->attack + mods_skills->attack;
+		cur_user->character->mod_stats.defense += mods_gear->defense + mods_skills->defense;
+		cur_user->character->mod_stats.dodge += mods_gear->dodge + mods_skills->dodge;
+		cur_user->character->mod_stats.power += mods_gear->power + mods_skills->power;
+		cur_user->character->mod_stats.spirit += mods_gear->spirit + mods_skills->spirit;
+		cur_user->character->mod_stats.avoid += mods_gear->avoid + mods_skills->avoid;
+	}
+	/* Re-add major stats to max */
+	cur_user->character->max_stats.life += cur_user->character->mod_stats.life;
+	cur_user->character->max_stats.stamina += cur_user->character->mod_stats.stamina;
+	cur_user->character->max_stats.magic += cur_user->character->mod_stats.magic;
+}

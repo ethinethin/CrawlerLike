@@ -78,7 +78,7 @@ main()
 		SDL_Delay(10);
 		/* If we have entered a new game, draw the character sheet */
 		if (cur_game->newgame == SDL_TRUE) {
-			char_screen(cur_game, cur_user, SDL_TRUE);
+			char_screen(cur_game, cur_user);
 			/* We have to redraw the game window */
 			render_clear(cur_game, "darkred");
 			draw_view(cur_game, cur_user);
@@ -121,7 +121,7 @@ main()
 					take_action(cur_game, cur_user);
 					break;
 				case SDLK_c: 		/* character screen */
-					char_screen(cur_game, cur_user, SDL_TRUE);
+					char_screen(cur_game, cur_user);
 					break;
 			}
 			redraw = SDL_TRUE;

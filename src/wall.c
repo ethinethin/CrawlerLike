@@ -31,7 +31,7 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 	draw_rect(cur_game, x, y, 321, 321, SDL_FALSE, "white");
 	/* Draw all walls adjacent to map spaces */
 	for (i = 1; i < cur_game->maps[map_num].rows - 1; i += 2) {
-		for (j = 1; j < cur_game->maps[map_num].cols - 1; j += 2) {	
+		for (j = 1; j < cur_game->maps[map_num].cols - 1; j += 2) {
 			/* This flattens the coordinates to account for even-numbered wall grids */
 			x_coord = j/2; y_coord = i/2;
 			/* Only draw if the space has been seen */

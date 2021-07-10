@@ -4,6 +4,7 @@
 
 /* Function prototypes */
 static void	draw_char(struct game *cur_game, int x, int y, int letter, float scale);
+static void	format_text(char *text, char formatted[1024], int n);
 
 void
 load_font(struct game *cur_game)
@@ -67,13 +68,17 @@ draw_sentence_xlimited(struct game *cur_game, int x, int y, char *sentence, floa
 	int i;
 	int start_x = x;
 	int len;
+	char formatted[1024];
 
-	for (i = 0, len = strlen(sentence); i < len; i++) {
-		if (sentence[i] != '\n') {
-			draw_char(cur_game, x, y, sentence[i] - 32, scale);
+	/* Format the text*/
+	format_text(sentence, formatted, (max_x - x)/(scale * 192) - 1);
+	/* Output the text */
+	for (i = 0, len = strlen(formatted); i < len; i++) {
+		if (formatted[i] != '\n') {
+			draw_char(cur_game, x, y, formatted[i] - 32, scale);
 			x += 192 * scale;
 		}
-		if (x >= (max_x - 192 * scale) || sentence[i] == '\n') {
+		if (x >= (max_x - 192 * scale) || formatted[i] == '\n') {
 			x = start_x;
 			y = y + 208 * scale;
 		}
@@ -84,4 +89,40 @@ void
 draw_sentence(struct game *cur_game, int x, int y, char *sentence, float scale)
 {
 	draw_sentence_xlimited(cur_game, x, y, sentence, scale, 1280);
+}
+
+static void
+format_text(char *text, char formatted[1024], int n)
+{
+	int form_i;
+	int len;
+	int text_i;
+	int x_pos;
+	
+	len = strlen(text);
+	/* If the string fits in a single line, just copy it */
+	if (len <= n) {
+		strncpy(formatted, text, len + 1);
+		return;
+	}
+	/* Reformat text to fit window */
+	for (text_i = 0, form_i = 0, x_pos = 0; text_i < len; text_i++, form_i++, x_pos++) {
+		/* Check if at end of line */
+		if (x_pos > n || text[text_i] == '\n') {
+			/* If you're on a space, replace a new line */
+			if (text[text_i] == ' ' || text[text_i] == '\n') {
+				formatted[form_i] = '\n';
+			} else {
+				/* Go backwords looking for a space */
+				while (text[text_i] != ' ') {
+					text_i--; form_i--;
+				}
+				formatted[form_i] = '\n';
+			}
+			x_pos = 0;
+		} else {
+			formatted[form_i] = text[text_i];
+		}
+	}
+	formatted[form_i] = '\0';
 }

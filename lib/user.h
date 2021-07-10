@@ -40,6 +40,7 @@ struct character {
 	int minor_points;
 	struct stats cur_stats;
 	struct stats max_stats;
+	struct stats mod_stats;
 	int inventory[8];
 	int gear[3];
 	int skills[3];

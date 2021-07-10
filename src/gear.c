@@ -13,12 +13,17 @@ static void		 prep_item_coords(struct user *cur_user);
 static int		 find_item(int x, int y);
 static SDL_bool		 drag_loop(struct game *cur_game, SDL_Rect *mouse, int i);
 static void		 draw_drag(struct game *cur_game, SDL_Rect *mouse, int i);
-static void		 handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j);
+static SDL_bool		 handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j);
+static int		 add_gear(int id, void *new_gear);
+static void		 del_gear(int id);
+static int		 gear_rarity(int id);
 static int		 gear_type(int id);
 static int		 gear_value(int id);
 static struct gear 	*find_gear(int id);
-
-enum type { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_ITEM, GEAR_ANY, GEAR_TRASH, GEAR_NULL };
+static int		 new_rarity(int level);
+static int		 new_type(void);
+static void		 gen_stats(struct stats *mods, int rarity, int level);
+static int		 calc_value(struct gear *cur_gear);
 
 /* Drawing/Clicking item coordinates on character screen */
 struct item_coords {
@@ -51,7 +56,7 @@ prep_item_coords(struct user *cur_user)
 	int i;
 	
 	if (item_coords[0].slot != NULL && item_coords[0].slot == &cur_user->character->gear[0]) return;
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i += 1) {
 		if (i < 3) {
 			item_coords[i].slot = &cur_user->character->gear[i];
 			item_coords[i + 3].slot = &cur_user->character->skills[i];
@@ -89,7 +94,9 @@ drag_mouse(struct game *cur_game, struct user *cur_user, int x, int y)
 	if (j == -1) return SDL_FALSE;
 	
 	/* Handle the item transfer */
-	handle_transfer(cur_game, cur_user, i, j);
+	if (handle_transfer(cur_game, cur_user, i, j) == SDL_TRUE) {
+		update_stats(cur_user);
+	}
 	return SDL_TRUE;
 }
 
@@ -98,7 +105,7 @@ find_item(int x, int y)
 {
 	int i;
 	
-	for (i = 0; item_coords[i].coords.x != -1; i++) {
+	for (i = 0; item_coords[i].coords.x != -1; i += 1) {
 		if (x >= item_coords[i].coords.x && x <= item_coords[i].coords.x + item_coords[i].coords.w &&
 		    y >= item_coords[i].coords.y && y <= item_coords[i].coords.y + item_coords[i].coords.h) {
 		    	/* Found it ! */
@@ -159,7 +166,7 @@ draw_drag(struct game *cur_game, SDL_Rect *mouse, int i)
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
-static void
+static SDL_bool
 handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 {
 	char message[100];
@@ -172,14 +179,15 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 	if (item_coords[j].type == GEAR_TRASH) {
 		value = gear_value(*item_coords[i].slot);
 		if (value != -1) {
-			sprintf(message, "This will destroy the item. Youwill receive %d gold. Okay?", value);
+			sprintf(message, "This will destroy the item. You will receive %d gold. Okay?", value);
 			if (yes_no(cur_game, message, SDL_TRUE, SDL_TRUE, SDL_FALSE) == SDL_TRUE) {
 				cur_user->character->money += value;
 				del_gear(*item_coords[i].slot);
 				*item_coords[i].slot = 0;
+				return SDL_TRUE;
 			}
 		}
-		return;
+		return SDL_FALSE;
 	} else if (item_coords[i].type == GEAR_ANY && item_coords[j].type == GEAR_ANY) {
 		src_type = GEAR_ANY;
 		dest_type = GEAR_ANY;
@@ -193,12 +201,16 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 		tmp = *item_coords[i].slot;
 		*item_coords[i].slot = *item_coords[j].slot;
 		*item_coords[j].slot = tmp;
+		return SDL_TRUE;
+	} else {
+		return SDL_FALSE;
 	}
 }
 
 /* Gear table linked list stuff - all below */
 struct gear {
 	int id;
+	int rarity;
 	int type;
 	int sprite;
 	int level;
@@ -215,6 +227,7 @@ init_gear(void)
 {
 	int i;
 	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
+	struct gear *new_gear;
 	struct stats mods;
 
 	/* Allocate memory for gear table, point to null, and set first id */
@@ -224,8 +237,15 @@ init_gear(void)
 	
 	/* Temporary - make starting gear */
 	zero_stats(&mods);
-	for (i = 1; i < 10; i++) {
-		add_gear(0, i, types[i - 1], 1, 10, &mods);
+	for (i = 1; i < 10; i += 1) {
+		new_gear = malloc(sizeof(*new_gear));
+		new_gear->sprite = i;
+		new_gear->rarity = RAR_TRASH;
+		new_gear->type = types[i - 1];
+		new_gear->level = 0;
+		new_gear->value = 10;
+		copy_stats(&mods, &new_gear->mods);
+		add_gear(0, new_gear);
 	}
 }
 
@@ -244,25 +264,21 @@ kill_gear(void)
 	free(tmp);
 }
 
-int
-add_gear(int id, int sprite, int type, int level, int value, struct stats *mods)
+static int
+add_gear(int id, void *new_gear_void)
 {
 	struct gear *tmp;
 	struct gear *new_gear;
 	
-	/* Make the new gear */
-	new_gear = malloc(sizeof(*new_gear));
-	new_gear->sprite = sprite;
+	/* Cast void pointer as struct gear */
+	new_gear = (struct gear *) new_gear_void;
+	/* Add item id and increment max_id  */
 	if (id == 0) {
 		new_gear->id = max_id;
 		max_id += 1;
 	} else {
 		new_gear->id = id;
 	}
-	new_gear->type = type;
-	new_gear->level = level;
-	new_gear->value = value;
-	copy_stats(mods, &new_gear->mods);
 	new_gear->next = NULL;
 	/* Add it to the list */
 	tmp = GEAR;
@@ -274,7 +290,7 @@ add_gear(int id, int sprite, int type, int level, int value, struct stats *mods)
 	return new_gear->id;
 }
 
-void
+static void
 del_gear(int id)
 {
 	struct gear *tmp;
@@ -317,6 +333,18 @@ gear_stats(int id)
 }
 
 static int
+gear_rarity(int id)
+{
+	struct gear *tmp;
+	
+	tmp = find_gear(id);
+	if (tmp != NULL) {
+		return tmp->rarity;
+	}
+	return GEAR_NULL;
+}
+
+static int
 gear_type(int id)
 {
 	struct gear *tmp;
@@ -355,6 +383,103 @@ find_gear(int id)
 	return NULL;
 }
 
+int
+create_gear(int level)
+{
+	struct gear *new_gear;
+	
+	/* Allocate memory for it */
+	new_gear = malloc(sizeof(*new_gear));	
+	/* Determine rarity */
+	new_gear->rarity = new_rarity(level);
+	/* Determine type */
+	new_gear->type = new_type();
+	/* Assign sprite and level */
+	new_gear->sprite = new_gear->type + 1;
+	new_gear->level = level;
+	/* Generate random stats */
+	zero_stats(&new_gear->mods);
+	gen_stats(&new_gear->mods, new_gear->rarity, new_gear->level);
+	/* Calculate and assign value */
+	new_gear->value = calc_value(new_gear);
+	/* Add it to the gear table */
+	return add_gear(0, new_gear);
+}
+
+static int
+new_rarity(int level)
+{
+	//if (rand_num(1, 6250) <= level) RAR_UNIQUE
+	if (rand_num(1, 1250) <= level) {
+		return RAR_RAREPLUS;
+	} else if (rand_num(1, 250) <= level) {
+		return RAR_RARE;
+	} else if (rand_num(1, 50) <= level) {
+		return RAR_UNCOMMON;
+	} else {
+		return RAR_COMMON;
+	}
+}
+
+static int
+new_type(void)
+{
+	int prob;
+	
+	/* Generate a random number and assign gear type */
+	prob = rand_num(0, 99);
+	if (prob < 25) {
+		return GEAR_WEAPON;
+	} else if (prob < 50) {
+		return GEAR_ARMOR;
+	} else if (prob < 75) {
+		return GEAR_ACCESSORY;
+	} else {
+		return GEAR_SKILL;
+	}
+}
+
+static void
+gen_stats(struct stats *mods, int rarity, int level)
+{
+	int stat;
+	int amount;
+	int *stats[9] = { &mods->life, &mods->stamina, &mods->magic,
+			  &mods->attack, &mods->defense, &mods->dodge,
+			  &mods->power, &mods->spirit, &mods->avoid };
+	
+	while (rarity > 0) {
+		/* Decide which stat you're increasing */
+		if (rand_num(0, 2) == 0) {
+			stat = rand_num(0, 2);
+			amount = rand_num(1 * level, 2 * level);
+		} else {
+			stat = rand_num(3, 8);
+			amount = rand_num(1 * level, 3 * level);
+		}
+		/* Assign stat increase to appropriate stat */
+		*stats[stat] += amount;
+		/* Increase stat by random amount */
+		rarity -= 1;
+	}
+}
+
+static int
+calc_value(struct gear *cur_gear)
+{
+	int value;
+	
+	/* Add up major and minor stats */
+	value = (cur_gear->mods.life + cur_gear->mods.stamina + cur_gear->mods.magic) * 4;
+	value += (cur_gear->mods.attack + cur_gear->mods.defense + cur_gear->mods.dodge) * 2;
+	value += (cur_gear->mods.power + cur_gear->mods.spirit + cur_gear->mods.avoid) * 2;
+	/* Multiply based on rarity */
+	if (value < 10) {
+		value = 10;
+	}
+	return value;
+}
+
 void
 dump_gear(FILE *fp)
 {
@@ -367,6 +492,7 @@ dump_gear(FILE *fp)
 	while (tmp->next != NULL) {
 		tmp = tmp->next;
 		fprintf(fp, "id=%d\n", tmp->id);
+		fprintf(fp, "  rarity=%d\n", tmp->rarity);
 		fprintf(fp, "  type=%d\n", tmp->type);
 		fprintf(fp, "  sprite=%d\n", tmp->sprite);
 		fprintf(fp, "  level=%d\n", tmp->level);
@@ -388,7 +514,8 @@ dump_gear(FILE *fp)
 void
 undump_gear(FILE *fp)
 {
-	struct gear tmp;
+	int id;
+	struct gear *tmp;
 	
 	/* Set up gear table */
 	GEAR = malloc(sizeof(*GEAR));
@@ -397,37 +524,24 @@ undump_gear(FILE *fp)
 	/* Load max_id */
 	fscanf(fp, "max_id=%d\n", &max_id);
 	while(SDL_TRUE) {
-		fscanf(fp, "id=%d\n", &tmp.id);
-		if (tmp.id == 0) {
-			break;
-		}
-		fscanf(fp, "  type=%d\n", &tmp.type);
-		fscanf(fp, "  sprite=%d\n", &tmp.sprite);
-		fscanf(fp, "  level=%d\n", &tmp.level);
-		fscanf(fp, "  value=%d\n", &tmp.value);
-		fscanf(fp, "  mods.life=%d\n", &tmp.mods.life);
-		fscanf(fp, "  mods.stamina=%d\n", &tmp.mods.stamina);
-		fscanf(fp, "  mods.magic=%d\n", &tmp.mods.magic);
-		fscanf(fp, "  mods.experience=%d\n", &tmp.mods.experience);
-		fscanf(fp, "  mods.attack=%d\n", &tmp.mods.attack);
-		fscanf(fp, "  mods.defense=%d\n", &tmp.mods.defense);
-		fscanf(fp, "  mods.dodge=%d\n", &tmp.mods.dodge);
-		fscanf(fp, "  mods.power=%d\n", &tmp.mods.power);
-		fscanf(fp, "  mods.spirit=%d\n", &tmp.mods.spirit);
-		fscanf(fp, "  mods.avoid=%d\n", &tmp.mods.avoid);
-		add_gear(tmp.id, tmp.sprite, tmp.type, tmp.level, tmp.value, &tmp.mods);
+		fscanf(fp, "id=%d\n", &id);
+		if (id == 0) break;
+		tmp = malloc(sizeof(*tmp));
+		fscanf(fp, "  rarity=%d\n", &tmp->rarity);
+		fscanf(fp, "  type=%d\n", &tmp->type);
+		fscanf(fp, "  sprite=%d\n", &tmp->sprite);
+		fscanf(fp, "  level=%d\n", &tmp->level);
+		fscanf(fp, "  value=%d\n", &tmp->value);
+		fscanf(fp, "  mods.life=%d\n", &tmp->mods.life);
+		fscanf(fp, "  mods.stamina=%d\n", &tmp->mods.stamina);
+		fscanf(fp, "  mods.magic=%d\n", &tmp->mods.magic);
+		fscanf(fp, "  mods.experience=%d\n", &tmp->mods.experience);
+		fscanf(fp, "  mods.attack=%d\n", &tmp->mods.attack);
+		fscanf(fp, "  mods.defense=%d\n", &tmp->mods.defense);
+		fscanf(fp, "  mods.dodge=%d\n", &tmp->mods.dodge);
+		fscanf(fp, "  mods.power=%d\n", &tmp->mods.power);
+		fscanf(fp, "  mods.spirit=%d\n", &tmp->mods.spirit);
+		fscanf(fp, "  mods.avoid=%d\n", &tmp->mods.avoid);
+		add_gear(id, tmp);
 	}
-}
-
-int
-create_gear(int level)
-{
-	int i;
-	int types[] = { GEAR_WEAPON, GEAR_ARMOR, GEAR_ACCESSORY, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL, GEAR_SKILL };
-	struct stats mods;
-
-	/* Temporary - make starting gear */
-	i = rand_num(1, 9);
-	zero_stats(&mods);
-	return add_gear(0, i, types[i - 1], level, 10, &mods);
 }
