@@ -7,6 +7,8 @@
 #include "user.h"
 
 extern SDL_bool		 drag_mouse(struct game *cur_game, struct user *cur_user, int x, int y);
+extern void		 gear_mouseover(struct game *cur_game, struct user *cur_user, int x, int y);
+extern void		 clear_info(struct game *cur_game);
 extern void		 init_gear(void);
 extern void		 kill_gear(void);
 extern int		 gear_sprite(int id);

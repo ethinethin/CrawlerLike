@@ -15,6 +15,7 @@ struct game {
 		SDL_Texture *output;
 		SDL_Texture *view;
 		SDL_Texture *char_screen_tex;
+		SDL_Texture *info;
 		SDL_bool vsync;
 		int mode;
 	} display;

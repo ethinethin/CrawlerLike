@@ -254,6 +254,7 @@ save_player(struct user *cur_user)
 	fprintf(fp, "row=%d\n", cur_user->row);
 	fprintf(fp, "col=%d\n", cur_user->col);
 	fprintf(fp, "facing=%d\n", cur_user->facing);
+	fprintf(fp, "life_counter=%d\n", cur_user->life_counter);
 	/* Output seen dimensions */
 	fprintf(fp, "num_seen=%d\n", cur_user->num_seen);
 	fprintf(fp, "seen_rows=%d\n", cur_user->seen[0].rows);
@@ -284,6 +285,7 @@ load_player(struct user *cur_user)
 	fscanf(fp, "row=%d\n", &cur_user->row);
 	fscanf(fp, "col=%d\n", &cur_user->col);
 	fscanf(fp, "facing=%d\n", &cur_user->facing);
+	fscanf(fp, "life_counter=%d\n", &cur_user->life_counter);
 	/* Input seen dimensions */
 	fscanf(fp, "num_seen=%d\n", &cur_user->num_seen);
 	fscanf(fp, "seen_rows=%d\n", &rows);

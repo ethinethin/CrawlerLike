@@ -12,6 +12,8 @@ static SDL_bool		handle_move(struct game *cur_game, struct user *cur_user, int r
 static void		open_chest(struct game *cur_game, struct user *cur_user);
 static void		change_level(struct game *cur_game, struct user *cur_user);
 static void		pass_time(struct game *cur_game);
+static void		regenerate(struct user *cur_user);
+
 
 void
 init_seen(struct seen *cur_seen, int rows, int cols)
@@ -97,6 +99,7 @@ handle_move(struct game *cur_game, struct user *cur_user, int row_d, int col_d, 
 		cur_user->row += row_d * 2;
 		cur_user->col += col_d * 2;
 		pass_time(cur_game);
+		regenerate(cur_user);
 		return SDL_TRUE;
 	} else {
 		return SDL_FALSE;
@@ -160,7 +163,10 @@ change_level(struct game *cur_game, struct user *cur_user)
 	} else if (*(*(cur_map->tiles + cur_user->row) + cur_user->col) == END && cur_level < cur_game->num_maps - 1) {
 		cur_user->map += 1;
 	}
-	if (cur_level != cur_user->map) pass_time(cur_game);
+	if (cur_level != cur_user->map) {
+		pass_time(cur_game);
+		regenerate(cur_user);
+	}
 }
 
 static void
@@ -170,5 +176,26 @@ pass_time(struct game *cur_game)
 	if (cur_game->minute == 144) {
 		cur_game->day += 1;
 		cur_game->minute = 0;
+	}
+}
+
+static void
+regenerate(struct user *cur_user)
+{
+	/* Regenerate 1 life every 5 turns */
+	cur_user->life_counter += 1;
+	if (cur_user->life_counter == 5) {
+		cur_user->life_counter = 0;
+		if (cur_user->character->cur_stats.life < cur_user->character->max_stats.life) {
+			cur_user->character->cur_stats.life += 1;
+		}
+	}
+	/* Regenerate 1 stamina every turn */
+	if (cur_user->character->cur_stats.stamina < cur_user->character->max_stats.stamina) {
+		cur_user->character->cur_stats.stamina += 1;
+	}
+	/* Regenerate 1 magic every turn */
+	if (cur_user->character->cur_stats.magic < cur_user->character->max_stats.magic) {
+		cur_user->character->cur_stats.magic += 1;
 	}
 }

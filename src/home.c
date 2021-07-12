@@ -530,6 +530,8 @@ new_game(struct game *cur_game, struct user *cur_user, int num_maps, int map_dim
 			populate_map(&cur_game->maps[i], cur_game->maps[i - 1].end.row, cur_game->maps[i - 1].end.col);
 		}
 	}
+	/* Initialize life counter */
+	cur_user->life_counter = 0;
 	/* Initialize the new character */
 	init_char(cur_game, cur_user);
 	/* Update starting square as seen */

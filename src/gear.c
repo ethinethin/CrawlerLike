@@ -2,6 +2,7 @@
 #include <SDL2/SDL.h>
 #include "char.h"
 #include "draw.h"
+#include "font.h"
 #include "home.h"
 #include "gear.h"
 #include "main.h"
@@ -14,6 +15,10 @@ static int		 find_item(int x, int y);
 static SDL_bool		 drag_loop(struct game *cur_game, SDL_Rect *mouse, int i);
 static void		 draw_drag(struct game *cur_game, SDL_Rect *mouse, int i);
 static SDL_bool		 handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j);
+static void		 prep_info(struct game *cur_game, struct stats *mouse_over, struct stats *equipped_gear[3], int type);
+static void		 stat_string_skill(struct stats *mouse_over, struct stats diff[3], char stats[1024]);
+static void		 stat_string_gear(struct stats *mouse_over, struct stats diff[3], char stats[1024]);
+static void		 draw_info(struct game *cur_game, char info[1024]);
 static int		 add_gear(int id, void *new_gear);
 static void		 del_gear(int id);
 static int		 gear_rarity(int id);
@@ -205,6 +210,190 @@ handle_transfer(struct game *cur_game, struct user *cur_user, int i, int j)
 	} else {
 		return SDL_FALSE;
 	}
+}
+
+void
+gear_mouseover(struct game *cur_game, struct user *cur_user, int x, int y)
+{
+	int i;
+	int type;
+	static SDL_bool zeroed = SDL_FALSE;
+	static struct stats zero;
+	struct stats *mouse_over = NULL;
+	struct stats *equipped_gear[3] = { &zero, &zero, &zero };
+	
+	/* Clear info window */
+	clear_info(cur_game);
+	/* Point to the right inventory slots and zero out stats zero */
+	prep_item_coords(cur_user);
+	if (zeroed == SDL_FALSE) {
+		zero_stats(&zero);
+		zeroed = SDL_TRUE;
+	}
+	for (i = 0; item_coords[i].coords.x != -1; i++) {
+		if (x >= item_coords[i].coords.x &&
+		    x <= item_coords[i].coords.x + item_coords[i].coords.w &&
+		    y >= item_coords[i].coords.y &&
+		    y <= item_coords[i].coords.y + item_coords[i].coords.h) {
+		    	if (item_coords[i].slot != NULL && *item_coords[i].slot != 0) {
+		    		mouse_over = gear_stats(*item_coords[i].slot);
+		    		type = gear_type(*item_coords[i].slot);
+		    		if (type == GEAR_WEAPON) {
+		    			if (cur_user->character->gear[0] != 0) {
+		    				equipped_gear[0] = gear_stats(cur_user->character->gear[0]);
+		    			}
+		    		} else if (type == GEAR_ARMOR) {
+		       			if (cur_user->character->gear[1] != 0) {
+		    				equipped_gear[0] = gear_stats(cur_user->character->gear[1]);
+		    			}
+		    		} else if (type == GEAR_ACCESSORY) {
+		    			if (cur_user->character->gear[2] != 0) {
+		    				equipped_gear[0] = gear_stats(cur_user->character->gear[2]);
+		    			}
+		    		} else if (type == GEAR_SKILL) {
+		    			if (cur_user->character->skills[0] != 0) {
+		    				equipped_gear[0] = gear_stats(cur_user->character->skills[0]);
+		    			}
+		    			if (cur_user->character->skills[1] != 0) {
+		    				equipped_gear[1] = gear_stats(cur_user->character->skills[1]);
+		    			}
+		    			if (cur_user->character->skills[2] != 0) {
+		    				equipped_gear[2] = gear_stats(cur_user->character->skills[2]);
+		    			}
+		    		}
+		    	}
+		    	if (mouse_over != NULL) {
+		    		prep_info(cur_game, mouse_over, equipped_gear, type);
+		    	}
+		    	break;
+		}
+	}
+}
+
+static void
+prep_info(struct game *cur_game, struct stats *mouse_over, struct stats *equipped_gear[3], int type)
+{
+	int i;
+	struct stats diff[3];
+	char stats[1024];
+
+	/* Zero out differences */
+	zero_stats(&diff[0]);
+	zero_stats(&diff[1]);
+	zero_stats(&diff[2]);
+	/* Loop through each equipped gear and calculate diff */
+	for (i = 0; i < (type == GEAR_SKILL ? 3 : 1); i += 1) {
+		diff[i].life = mouse_over->life - equipped_gear[i]->life;
+		diff[i].stamina = mouse_over->stamina - equipped_gear[i]->stamina;
+		diff[i].magic = mouse_over->magic - equipped_gear[i]->magic;
+		diff[i].attack = mouse_over->attack - equipped_gear[i]->attack;
+		diff[i].defense = mouse_over->defense - equipped_gear[i]->defense;
+		diff[i].dodge = mouse_over->dodge - equipped_gear[i]->dodge;
+		diff[i].power = mouse_over->power - equipped_gear[i]->power;
+		diff[i].spirit = mouse_over->spirit - equipped_gear[i]->spirit;
+		diff[i].avoid = mouse_over->avoid - equipped_gear[i]->avoid;
+	}
+	/* Put in name of item */
+	if (type == GEAR_WEAPON) {
+		sprintf(stats, "Weapon\n------\n");
+	} else if (type == GEAR_ARMOR) {
+		sprintf(stats, "Armor\n-----\n");
+	} else if (type == GEAR_ACCESSORY) {
+		sprintf(stats, "Accessory\n---------\n");
+	} else {
+		sprintf(stats, "Skill\n-----\n");
+	}
+	/* Build format string with stats */
+	if (type == GEAR_SKILL) {
+		stat_string_skill(mouse_over, diff, stats);
+	} else {
+		stat_string_gear(mouse_over, diff, stats);
+	}
+	/* Now finally draw it */
+	draw_info(cur_game, stats);
+}
+
+static void
+stat_string_skill(struct stats *mouse_over, struct stats diff[3], char stats[1024])
+{
+	if (mouse_over->life != 0 || diff[0].life != 0 || diff[1].life != 0 || diff[2].life != 0) {
+		sprintf(stats, "%sLife: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->life, diff[0].life, diff[1].life, diff[2].life);
+	}
+	if (mouse_over->stamina != 0 || diff[0].stamina != 0 || diff[1].stamina != 0 || diff[2].stamina != 0) {
+		sprintf(stats, "%sStamina: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->stamina, diff[0].stamina, diff[1].stamina, diff[2].stamina);
+	}
+	if (mouse_over->magic != 0 || diff[0].magic != 0 || diff[1].magic != 0 || diff[2].magic != 0) {
+		sprintf(stats, "%sMagic: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->magic, diff[0].magic, diff[1].magic, diff[2].magic);
+	}
+	if (mouse_over->attack != 0 || diff[0].attack != 0 || diff[1].attack != 0 || diff[2].attack != 0) {
+		sprintf(stats, "%sAttack: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->attack, diff[0].attack, diff[1].attack, diff[2].attack);
+	}
+	if (mouse_over->defense != 0 || diff[0].defense != 0 || diff[1].defense != 0 || diff[2].defense != 0) {
+		sprintf(stats, "%sDefense: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->defense, diff[0].defense, diff[1].defense, diff[2].defense);
+	}
+	if (mouse_over->dodge != 0 || diff[0].dodge != 0 || diff[1].dodge != 0 || diff[2].dodge != 0) {
+		sprintf(stats, "%sDodge: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->dodge, diff[0].dodge, diff[1].dodge, diff[2].dodge);
+	}
+	if (mouse_over->power != 0 || diff[0].power != 0 || diff[1].power != 0 || diff[2].power != 0) {
+		sprintf(stats, "%sPower: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->power, diff[0].power, diff[1].power, diff[2].power);
+	}
+	if (mouse_over->spirit != 0 || diff[0].spirit != 0 || diff[1].spirit != 0 || diff[2].spirit != 0) {
+		sprintf(stats, "%sSpirit: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->spirit, diff[0].spirit, diff[1].spirit, diff[2].spirit);
+	}
+	if (mouse_over->avoid != 0 || diff[0].avoid != 0 || diff[1].avoid != 0 || diff[2].avoid != 0) {
+		sprintf(stats, "%sAvoid: %d (%+d) (%+d) (%+d)\n", stats, mouse_over->avoid, diff[0].avoid, diff[1].avoid, diff[2].avoid);
+	}
+}
+
+static void
+stat_string_gear(struct stats *mouse_over, struct stats diff[3], char stats[1024])
+{
+	if (mouse_over->life != 0 || diff[0].life != 0) {
+		sprintf(stats, "%sLife: %d (%+d)\n", stats, mouse_over->life, diff[0].life);
+	}
+	if (mouse_over->stamina != 0 || diff[0].stamina != 0) {
+		sprintf(stats, "%sStamina: %d (%+d)\n", stats, mouse_over->stamina, diff[0].stamina);
+	}
+	if (mouse_over->magic != 0 || diff[0].magic != 0) {
+		sprintf(stats, "%sMagic: %d (%+d)\n", stats, mouse_over->magic, diff[0].magic);
+	}
+	if (mouse_over->attack != 0 || diff[0].attack != 0) {
+		sprintf(stats, "%sAttack: %d (%+d)\n", stats, mouse_over->attack, diff[0].attack);
+	}
+	if (mouse_over->defense != 0 || diff[0].defense != 0) {
+		sprintf(stats, "%sDefense: %d (%+d)\n", stats, mouse_over->defense, diff[0].defense);
+	}
+	if (mouse_over->dodge != 0 || diff[0].dodge != 0) {
+		sprintf(stats, "%sDodge: %d (%+d)\n", stats, mouse_over->dodge, diff[0].dodge);
+	}
+	if (mouse_over->power != 0 || diff[0].power != 0) {
+		sprintf(stats, "%sPower: %d (%+d)\n", stats, mouse_over->power, diff[0].power);
+	}
+	if (mouse_over->spirit != 0 || diff[0].spirit != 0) {
+		sprintf(stats, "%sSpirit: %d (%+d)\n", stats, mouse_over->spirit, diff[0].spirit);
+	}
+	if (mouse_over->avoid != 0 || diff[0].avoid != 0) {
+		sprintf(stats, "%sAvoid: %d (%+d)\n", stats, mouse_over->avoid, diff[0].avoid);
+	}
+}
+
+static void
+draw_info(struct game *cur_game, char info[1024])
+{
+	/* Output stats to the info texture */
+	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.info);
+	draw_rect(cur_game, 0, 0, 594, 302, SDL_TRUE, "darkgrey");
+	draw_sentence(cur_game, 10, 10, info, 0.1);
+	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.char_screen_tex);
+}
+
+void
+clear_info(struct game *cur_game)
+{
+	/* Draw a black rectangle on top of the info texture */
+	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.info);
+	draw_rect(cur_game, 0, 0, 594, 302, SDL_TRUE, "darkgrey");
+	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.char_screen_tex);
 }
 
 /* Gear table linked list stuff - all below */

@@ -292,6 +292,10 @@ char_screen(struct game *cur_game, struct user *cur_user)
 					loop = SDL_FALSE;
 				}
 			}
+		} else if (event.type == SDL_MOUSEMOTION) {
+			x = (event.motion.x) / cur_game->display.scale_w - 64;
+			y = (event.motion.y) / cur_game->display.scale_h - 36;
+			gear_mouseover(cur_game, cur_user, x, y);
 		}
 		/* Only output the screen if the user gave input */
 		draw_char_screen(cur_game, cur_user, temp_stats, points);
@@ -438,7 +442,9 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, struct stats *tem
 	SDL_Rect view_src = { 341, 10, 929, 700 };
 	SDL_Rect view_dest = { 341 * cur_game->display.scale_w, 10 * cur_game->display.scale_h, 929 * cur_game->display.scale_w, 700  * cur_game->display.scale_h };	
 	SDL_Rect screen_src = { 0, 0, 1152, 648 };
-	SDL_Rect screen_dest = { 64 * cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152* cur_game->display.scale_w, 648 * cur_game->display.scale_h };
+	SDL_Rect screen_dest = { 64 * cur_game->display.scale_w, 36 * cur_game->display.scale_h, 1152 * cur_game->display.scale_w, 648 * cur_game->display.scale_h };
+	SDL_Rect info_src = { 0, 0, 592, 300 };
+	SDL_Rect info_dest = { 549, 80, 592, 300 };
 	
 	/* Render to custom target and clear it */
 	SDL_SetRenderTarget(cur_game->display.renderer, cur_game->display.char_screen_tex);
@@ -470,7 +476,8 @@ draw_char_screen(struct game *cur_game, struct user *cur_user, struct stats *tem
 	draw_gear(cur_game, cur_user);
 	draw_inv(cur_game, cur_user);
 	draw_sys(cur_game, cur_user);
-
+	/* Output info */
+	SDL_RenderCopy(cur_game->display.renderer, cur_game->display.info, &info_src, &info_dest);
 	/* Switch to rendering target and output current output */
 	SDL_SetRenderTarget(cur_game->display.renderer, NULL);
 	SDL_RenderClear(cur_game->display.renderer);
@@ -759,4 +766,55 @@ update_stats(struct user *cur_user)
 	cur_user->character->max_stats.life += cur_user->character->mod_stats.life;
 	cur_user->character->max_stats.stamina += cur_user->character->mod_stats.stamina;
 	cur_user->character->max_stats.magic += cur_user->character->mod_stats.magic;
+	/* Check if current major stats are over max and reduce if necessary */
+	if (cur_user->character->cur_stats.life > cur_user->character->max_stats.life) {
+		cur_user->character->cur_stats.life = cur_user->character->max_stats.life;
+	}
+	if (cur_user->character->cur_stats.stamina > cur_user->character->max_stats.stamina) {
+		cur_user->character->cur_stats.stamina = cur_user->character->max_stats.stamina;
+	}
+	if (cur_user->character->cur_stats.magic > cur_user->character->max_stats.magic) {
+		cur_user->character->cur_stats.magic = cur_user->character->max_stats.magic;
+	}
+}
+
+void
+draw_meters(struct game *cur_game, struct user *cur_user)
+{
+	int meter;
+	float meter_per;
+	
+	/* Full meter rectangle horizontal size = 235 */
+	/* Draw life */
+	meter_per = ((float) cur_user->character->cur_stats.life) / ((float) cur_user->character->max_stats.life);
+	meter = 235 * meter_per;
+	draw_sentence(cur_game, 30, 444, "LP", 0.1);
+	draw_rect(cur_game, 75, 445, meter, 16, SDL_TRUE, "lightred");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 445, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 445, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 445, 50, 50, 255, SDL_TRUE);
+	/* Draw stamina */
+	meter_per = ((float) cur_user->character->cur_stats.stamina) / ((float) cur_user->character->max_stats.stamina);
+	meter = 235 * meter_per;
+	draw_sentence(cur_game, 30, 466, "SP", 0.1);
+	draw_rect(cur_game, 75, 467, meter, 16, SDL_TRUE, "lightgreen");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 467, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 467, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 467, 50, 50, 255, SDL_TRUE);
+	/* Draw magic */
+	meter_per = ((float) cur_user->character->cur_stats.magic) / ((float) cur_user->character->max_stats.magic);
+	meter = 235 * meter_per;
+	draw_sentence(cur_game, 30, 488, "MP", 0.1);
+	draw_rect(cur_game, 75, 489, meter, 16, SDL_TRUE, "lightblue");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 489, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 489, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 489, 50, 50, 255, SDL_TRUE);
+	/* Draw experience */
+	meter_per = ((float) cur_user->character->cur_stats.experience) / ((float) cur_user->character->max_stats.experience);
+	meter = 235 * meter_per;
+	draw_sentence(cur_game, 30, 510, "XP", 0.1);
+	draw_rect(cur_game, 75, 511, meter, 16, SDL_TRUE, "lightyellow");
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 511, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 511, 139, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 511, 50, 50, 255, SDL_TRUE);
 }

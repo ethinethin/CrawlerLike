@@ -11,5 +11,6 @@ extern void	char_screen(struct game *cur_game, struct user *cur_user);
 extern void	zero_stats(struct stats *cur_stats);
 extern void	copy_stats(struct stats *src, struct stats *dest);
 extern void	update_stats(struct user *cur_user);
+extern void	draw_meters(struct game *cur_game, struct user *cur_user);
 
 #endif

@@ -22,6 +22,7 @@ struct game GAME = {
 	  NULL,		/* display.output */
 	  NULL,		/* display.view */
 	  NULL,		/* display.char_screen_tex */
+	  NULL,		/* display.info */
 	  SDL_FALSE,	/* display.vsync */
 	  2 },		/* display.mode */
 	{ NULL,		/* sprites.walls */

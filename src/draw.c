@@ -1,7 +1,9 @@
 #include <SDL2/SDL.h>
+#include "char.h"
 #include "cols.h"
 #include "draw.h"
 #include "font.h"
+#include "gear.h"
 #include "main.h"
 #include "maze.h"
 #include "user.h"
@@ -45,6 +47,9 @@ display_init(struct game *cur_game)
 	cur_game->display.char_screen_tex = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1152, 648);
 	/* Create view texture */
 	cur_game->display.view = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1280, 720);
+	/* Create info window texture */
+	cur_game->display.info = SDL_CreateTexture(cur_game->display.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 592, 300);
+	clear_info(cur_game);
 	/* Load sprites and font */
 	load_sprites(cur_game);
 	load_font(cur_game);
@@ -58,6 +63,7 @@ display_quit(struct game *cur_game)
 	SDL_DestroyTexture(cur_game->display.view);
 	SDL_DestroyTexture(cur_game->display.char_screen_tex);
 	SDL_DestroyTexture(cur_game->display.output);
+	SDL_DestroyTexture(cur_game->display.info);
 	SDL_DestroyRenderer(cur_game->display.renderer);
 	cur_game->display.renderer = NULL;
 	SDL_DestroyWindow(cur_game->display.window);
@@ -223,26 +229,5 @@ draw_screen(struct game *cur_game, struct user *cur_user)
 	draw_sentence(cur_game, 20, 396, text, 0.1);
 	sprintf(text, "Lv. %d", cur_user->character->level);
 	draw_sentence(cur_game, 20, 418, text, 0.1);
-	/* Draw points */
-	draw_sentence(cur_game, 30, 441, "LP", 0.1);
-	draw_rect(cur_game, 75, 442, 235, 16, SDL_TRUE, "lightred");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 442, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 442, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 442, 50, 50, 255, SDL_TRUE);
-	draw_sentence(cur_game, 30, 466, "SP", 0.1);
-	draw_rect(cur_game, 75, 467, 235, 16, SDL_TRUE, "lightgreen");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 467, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 467, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 467, 50, 50, 255, SDL_TRUE);
-	draw_sentence(cur_game, 30, 488, "MP", 0.1);
-	draw_rect(cur_game, 75, 489, 235, 16, SDL_TRUE, "lightblue");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 489, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 489, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 489, 50, 50, 255, SDL_TRUE);
-	draw_sentence(cur_game, 30, 510, "XP", 0.1);
-	draw_rect(cur_game, 75, 511, 235, 16, SDL_TRUE, "lightyellow");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 511, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 511, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 511, 50, 50, 255, SDL_TRUE);
-	
+	draw_meters(cur_game, cur_user);	
 }

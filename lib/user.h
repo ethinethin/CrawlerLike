@@ -8,6 +8,7 @@ struct user {
 	int row;
 	int col;
 	int facing;
+	int life_counter;
 	int num_seen;
 	struct seen *seen;
 	struct character *character;
