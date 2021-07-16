@@ -15,8 +15,10 @@ Download and install the SDL2 library (https://www.libsdl.org). I recommend inst
 - ESC: Main menu
 - Up/W: Move forward one space
 - Down/S: Move backward one space
-- Left/A: Turn 90-degrees left
-- Right/D: Turn 90-degrees right
+- Left/Q: Turn 90-degrees left
+- Right/E: Turn 90-degrees right
+- A: move left one square without turning
+- D: move right on square without turning
 - C: open character sheet
 - Space: go up or down stairs
 
