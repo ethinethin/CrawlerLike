@@ -36,10 +36,12 @@ Download and install the SDL2 library (https://www.libsdl.org). I recommend inst
 - Allocating stat points on character screen
 - Money from trashing items
 - Time passing
+- Item random stat generation
+- Treasure boxes with items in dungeon
 
 ### The features planned are:
 
-- Random/procedural item and skill generation
+- Better procedural item and skill generation, with icon building
 - Consumable items
 - Monsters
 - Combat
