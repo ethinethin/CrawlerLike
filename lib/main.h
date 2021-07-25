@@ -23,7 +23,9 @@ struct game {
 		SDL_Texture **walls;
 		SDL_Texture **floors;
 		SDL_Texture **icons;
-		SDL_Texture **gear;
+		SDL_Texture **gear_rarity;
+		SDL_Texture **gear_type;
+		SDL_Texture **gear_attribute;
 		SDL_Texture **junk;
 		SDL_Texture **arrows;
 		SDL_Texture **font;

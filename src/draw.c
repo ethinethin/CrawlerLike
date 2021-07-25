@@ -75,8 +75,10 @@ load_sprites(struct game *cur_game)
 {
 	cur_game->sprites.walls = load_image(cur_game, "art/walls.bmp", 24, 64, 64);
 	cur_game->sprites.floors = load_image(cur_game, "art/floors.bmp", 3, 300, 230);
-	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 16, 50, 50);
-	cur_game->sprites.gear = load_image(cur_game, "art/gear.bmp", 9, 50, 50);
+	cur_game->sprites.icons = load_image(cur_game, "art/icons.bmp", 17, 50, 50);
+	cur_game->sprites.gear_rarity = load_image(cur_game, "art/gear_rarity.bmp", 6, 50, 50);
+	cur_game->sprites.gear_type = load_image(cur_game, "art/gear_type.bmp", 4, 50, 50);
+	cur_game->sprites.gear_attribute = load_image(cur_game, "art/gear_attribute.bmp", 6, 50, 50);
 	cur_game->sprites.junk = load_image(cur_game, "art/junk.bmp", 24, 64, 64);
 	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
 }
@@ -112,8 +114,10 @@ unload_sprites(struct game *cur_game)
 {
 	unload_image(cur_game->sprites.walls, 24);
 	unload_image(cur_game->sprites.floors, 3);
-	unload_image(cur_game->sprites.icons, 16);
-	unload_image(cur_game->sprites.gear, 9);
+	unload_image(cur_game->sprites.icons, 17);
+	unload_image(cur_game->sprites.gear_rarity, 6);
+	unload_image(cur_game->sprites.gear_type, 4);
+	unload_image(cur_game->sprites.gear_attribute, 6);
 	unload_image(cur_game->sprites.junk, 24);
 	unload_image(cur_game->sprites.arrows, 6);
 }

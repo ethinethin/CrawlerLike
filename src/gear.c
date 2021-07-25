@@ -21,8 +21,6 @@ static void		 stat_string_gear(struct stats *mouse_over, struct stats diff[3], c
 static void		 draw_info(struct game *cur_game, char info[1024]);
 static int		 add_gear(int id, void *new_gear);
 static void		 del_gear(int id);
-static int		 gear_rarity(int id);
-static int		 gear_type(int id);
 static int		 gear_value(int id);
 static struct gear 	*find_gear(int id);
 static int		 new_rarity(int level);
@@ -167,7 +165,9 @@ draw_drag(struct game *cur_game, SDL_Rect *mouse, int i)
 	/* Draw empty slot over the icon - need to scale its location and size because it's being rendered directly */
 	draw_sprites(cur_game, cur_game->sprites.icons, item_coords[i].empty, (item_coords[i].coords.x + 64) * cur_game->display.scale_w, (item_coords[i].coords.y + 36) * cur_game->display.scale_h, item_coords[i].coords.w * cur_game->display.scale_w, item_coords[i].coords.h * cur_game->display.scale_h, 255, SDL_FALSE);
 	/* Draw icon for item being dragged - also scaled*/
-	draw_sprites(cur_game, cur_game->sprites.gear, gear_sprite(*item_coords[i].slot) - 1, (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(*item_coords[i].slot), (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(*item_coords[i].slot), (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(*item_coords[i].slot), (mouse->x - mouse->w + 64) * cur_game->display.scale_w, (mouse->y - mouse->h + 36) * cur_game->display.scale_h, 100 * cur_game->display.scale_w, 100 * cur_game->display.scale_h, 255, SDL_FALSE);
 	SDL_RenderPresent(cur_game->display.renderer);
 }
 
@@ -401,7 +401,7 @@ struct gear {
 	int id;
 	int rarity;
 	int type;
-	int sprite;
+	int attribute;
 	int level;
 	int value;
 	struct stats mods;
@@ -428,9 +428,13 @@ init_gear(void)
 	zero_stats(&mods);
 	for (i = 1; i < 10; i += 1) {
 		new_gear = malloc(sizeof(*new_gear));
-		new_gear->sprite = i;
 		new_gear->rarity = RAR_TRASH;
 		new_gear->type = types[i - 1];
+		if (new_gear->type == GEAR_SKILL) {
+			new_gear->attribute = rand_num(1, 5);
+		} else {
+			new_gear->attribute = ATTR_NONE;
+		}
 		new_gear->level = 0;
 		new_gear->value = 10;
 		copy_stats(&mods, &new_gear->mods);
@@ -498,13 +502,13 @@ del_gear(int id)
 }
 
 int
-gear_sprite(int id)
+gear_attribute(int id)
 {
 	struct gear *tmp;
 	
 	tmp = find_gear(id);
 	if (tmp != NULL) {
-		return tmp->sprite;
+		return tmp->attribute;
 	}
 	return 0;
 }
@@ -521,7 +525,7 @@ gear_stats(int id)
 	return NULL;
 }
 
-static int
+int
 gear_rarity(int id)
 {
 	struct gear *tmp;
@@ -533,7 +537,7 @@ gear_rarity(int id)
 	return GEAR_NULL;
 }
 
-static int
+int
 gear_type(int id)
 {
 	struct gear *tmp;
@@ -583,8 +587,13 @@ create_gear(int level)
 	new_gear->rarity = new_rarity(level);
 	/* Determine type */
 	new_gear->type = new_type();
-	/* Assign sprite and level */
-	new_gear->sprite = new_gear->type + 1;
+	/* Determine attribute */
+	if (new_gear->type == GEAR_SKILL || rand_num(0, 9) == 9) {
+		new_gear->attribute = rand_num(1, 5);
+	} else {
+		new_gear->attribute = ATTR_NONE;
+	}
+	/* Assign level */
 	new_gear->level = level;
 	/* Generate random stats */
 	zero_stats(&new_gear->mods);
@@ -683,7 +692,7 @@ dump_gear(FILE *fp)
 		fprintf(fp, "id=%d\n", tmp->id);
 		fprintf(fp, "  rarity=%d\n", tmp->rarity);
 		fprintf(fp, "  type=%d\n", tmp->type);
-		fprintf(fp, "  sprite=%d\n", tmp->sprite);
+		fprintf(fp, "  attribute=%d\n", tmp->attribute);
 		fprintf(fp, "  level=%d\n", tmp->level);
 		fprintf(fp, "  value=%d\n", tmp->value);
 		fprintf(fp, "  mods.life=%d\n", tmp->mods.life);
@@ -718,7 +727,7 @@ undump_gear(FILE *fp)
 		tmp = malloc(sizeof(*tmp));
 		fscanf(fp, "  rarity=%d\n", &tmp->rarity);
 		fscanf(fp, "  type=%d\n", &tmp->type);
-		fscanf(fp, "  sprite=%d\n", &tmp->sprite);
+		fscanf(fp, "  attribute=%d\n", &tmp->attribute);
 		fscanf(fp, "  level=%d\n", &tmp->level);
 		fscanf(fp, "  value=%d\n", &tmp->value);
 		fscanf(fp, "  mods.life=%d\n", &tmp->mods.life);
