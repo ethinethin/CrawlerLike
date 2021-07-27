@@ -80,6 +80,7 @@ load_sprites(struct game *cur_game)
 	cur_game->sprites.gear_type = load_image(cur_game, "art/gear_type.bmp", 4, 50, 50);
 	cur_game->sprites.gear_attribute = load_image(cur_game, "art/gear_attribute.bmp", 6, 50, 50);
 	cur_game->sprites.junk = load_image(cur_game, "art/junk.bmp", 24, 64, 64);
+	cur_game->sprites.ladders = load_image(cur_game, "art/ladders.bmp", 8, 64, 128);
 	cur_game->sprites.arrows = load_image(cur_game, "art/arrows.bmp", 6, 16, 16);
 }
 
@@ -119,6 +120,7 @@ unload_sprites(struct game *cur_game)
 	unload_image(cur_game->sprites.gear_type, 4);
 	unload_image(cur_game->sprites.gear_attribute, 6);
 	unload_image(cur_game->sprites.junk, 24);
+	unload_image(cur_game->sprites.ladders, 8);
 	unload_image(cur_game->sprites.arrows, 6);
 }
 
@@ -194,13 +196,17 @@ draw_rect(struct game *cur_game, int x, int y, int w, int h, SDL_bool fill, char
 }
 
 void
-draw_sprites(struct game *cur_game, SDL_Texture **sprites, int sprite_id, int x, int y, int w, int h, int alpha, SDL_bool flip)
+draw_sprites(struct game *cur_game, SDL_Texture **sprites, int sprite_id, int x, int y, int w, int h, int alpha, SDL_bool hflip, SDL_bool vflip)
 {
 	SDL_Rect rect = {x, y, w, h};
 	SDL_RendererFlip flip_dir;
 	
-	if (flip == SDL_TRUE) {
+	if (hflip && !vflip) {
 		flip_dir = SDL_FLIP_HORIZONTAL;
+	} else if (hflip && vflip) {
+		flip_dir = SDL_FLIP_HORIZONTAL|SDL_FLIP_VERTICAL;
+	} else if (!hflip && vflip) {
+		flip_dir = SDL_FLIP_VERTICAL;
 	} else {
 		flip_dir = SDL_FLIP_NONE;
 	}

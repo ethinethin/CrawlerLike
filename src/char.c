@@ -215,8 +215,8 @@ draw_name(struct game *cur_game, char buffer[18])
 	draw_rect(cur_game, 523, 345, 310, 26, SDL_TRUE, "black");
 	draw_rect(cur_game, 523, 345, 310, 26, SDL_FALSE, "white");
 	draw_sentence(cur_game, 526, 349, buffer, 0.1);
-	draw_sprites(cur_game, cur_game->sprites.icons, 6, 785, 376, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 13, 730, 376, 50, 50, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 6, 785, 376, 50, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 13, 730, 376, 50, 50, 255, SDL_FALSE, SDL_FALSE);
 }
 
 enum char_clicks { CLICK_NULL, CLICK_STAT, CLICK_YES, CLICK_CANCEL };
@@ -569,7 +569,7 @@ draw_stat_arrows(struct game *cur_game, struct stats *temp_stats[3], int points[
 		} else {
 			continue;
 		}
-		draw_sprites(cur_game, cur_game->sprites.icons, sprite, arrows[i].rect.x, arrows[i].rect.y, arrows[i].rect.w, arrows[i].rect.h, 255, SDL_FALSE);
+		draw_sprites(cur_game, cur_game->sprites.icons, sprite, arrows[i].rect.x, arrows[i].rect.y, arrows[i].rect.w, arrows[i].rect.h, 255, SDL_FALSE, SDL_FALSE);
 	}	
 }
 
@@ -581,20 +581,20 @@ draw_gear(struct game *cur_game, struct user *cur_user)
 	
 	for (i = 0; i < 3; i++) {
 		/* Draw gear */
-		draw_sprites(cur_game, cur_game->sprites.icons, 8 + i, x[i], 419, 100, 100, 255, SDL_FALSE);
+		draw_sprites(cur_game, cur_game->sprites.icons, 8 + i, x[i], 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 		if (cur_user->character->gear[i] != 0) {
-			draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.icons, 16, x[i], 419, 100, 100, 255, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->gear[i]), x[i], 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.icons, 16, x[i], 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 		}
 		/* Draw skills */
-		draw_sprites(cur_game, cur_game->sprites.icons, 11, x[i], 529, 100, 100, 255, SDL_FALSE);
+		draw_sprites(cur_game, cur_game->sprites.icons, 11, x[i], 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 		if (cur_user->character->skills[i] != 0) {
-			draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE);
-			draw_sprites(cur_game, cur_game->sprites.icons, 16, x[i], 529, 100, 100, 255, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->skills[i]), x[i], 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.icons, 16, x[i], 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 		}
 	}
 }
@@ -606,12 +606,12 @@ draw_inv(struct game *cur_game, struct user *cur_user)
 	int x[] = { 408, 528, 648, 768 };
 	for (i = 0; i < 2; i++) {
 		for (j = 0; j < 4; j++) {
-			draw_sprites(cur_game, cur_game->sprites.icons, 12, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
+			draw_sprites(cur_game, cur_game->sprites.icons, 12, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 			if (cur_user->character->inventory[j + i * 4] != 0) {
-				draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
-				draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
-				draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
-				draw_sprites(cur_game, cur_game->sprites.icons, 16, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE);
+				draw_sprites(cur_game, cur_game->sprites.gear_rarity, gear_rarity(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+				draw_sprites(cur_game, cur_game->sprites.gear_type, gear_type(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+				draw_sprites(cur_game, cur_game->sprites.gear_attribute, gear_attribute(cur_user->character->inventory[j + i * 4]), x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+				draw_sprites(cur_game, cur_game->sprites.icons, 16, x[j], 419 + i * 110, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 			}
 		}
 	}
@@ -621,16 +621,16 @@ static void
 draw_sys(struct game *cur_game, struct user *cur_user)
 {
 	char money[6];
-	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 5, 908, 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 	if (cur_user->character->money == 0) {
 		sprintf(money, "    0");
 	} else {
 		sprintf(money, "%5d", cur_user->character->money);
 	}
 	draw_sentence(cur_game, 915, 494, money, 0.095);
-	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 6, 1028, 419, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 4, 908, 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 7, 1028, 529, 100, 100, 255, SDL_FALSE, SDL_FALSE);
 }
 
 static int
@@ -788,31 +788,31 @@ draw_meters(struct game *cur_game, struct user *cur_user)
 	meter = 235 * meter_per;
 	draw_sentence(cur_game, 30, 444, "LP", 0.1);
 	draw_rect(cur_game, 75, 445, meter, 16, SDL_TRUE, "lightred");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 445, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 445, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 445, 50, 50, 255, SDL_TRUE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 445, 50, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 445, 139, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 445, 50, 50, 255, SDL_TRUE, SDL_FALSE);
 	/* Draw stamina */
 	meter_per = ((float) cur_user->character->cur_stats.stamina) / ((float) cur_user->character->max_stats.stamina);
 	meter = 235 * meter_per;
 	draw_sentence(cur_game, 30, 466, "SP", 0.1);
 	draw_rect(cur_game, 75, 467, meter, 16, SDL_TRUE, "lightgreen");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 467, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 467, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 467, 50, 50, 255, SDL_TRUE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 467, 50, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 467, 139, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 467, 50, 50, 255, SDL_TRUE, SDL_FALSE);
 	/* Draw magic */
 	meter_per = ((float) cur_user->character->cur_stats.magic) / ((float) cur_user->character->max_stats.magic);
 	meter = 235 * meter_per;
 	draw_sentence(cur_game, 30, 488, "MP", 0.1);
 	draw_rect(cur_game, 75, 489, meter, 16, SDL_TRUE, "lightblue");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 489, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 489, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 489, 50, 50, 255, SDL_TRUE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 489, 50, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 489, 139, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 489, 50, 50, 255, SDL_TRUE, SDL_FALSE);
 	/* Draw experience */
 	meter_per = ((float) cur_user->character->cur_stats.experience) / ((float) cur_user->character->max_stats.experience);
 	meter = 235 * meter_per;
 	draw_sentence(cur_game, 30, 510, "XP", 0.1);
 	draw_rect(cur_game, 75, 511, meter, 16, SDL_TRUE, "lightyellow");
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 511, 50, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 511, 139, 50, 255, SDL_FALSE);
-	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 511, 50, 50, 255, SDL_TRUE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 73, 511, 50, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 15, 123, 511, 139, 50, 255, SDL_FALSE, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.icons, 14, 262, 511, 50, 50, 255, SDL_TRUE, SDL_FALSE);
 }

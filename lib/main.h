@@ -27,6 +27,7 @@ struct game {
 		SDL_Texture **gear_type;
 		SDL_Texture **gear_attribute;
 		SDL_Texture **junk;
+		SDL_Texture **ladders;
 		SDL_Texture **arrows;
 		SDL_Texture **font;
 	} sprites;
@@ -55,7 +56,9 @@ struct map {
 	int **junk;
 	int **junk_face;
 	struct coords start;
+	int start_face;
 	struct coords end;
+	int end_face;
 };
 
 enum room { WALL, ROOM, UNKNOWN, POTENTIAL, START, END, DOOR };

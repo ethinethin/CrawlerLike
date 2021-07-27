@@ -15,6 +15,7 @@ static void	remove_wall(struct map *cur_map, int row, int col, int count);
 static int	count_rooms(struct map *cur_map);
 static void	make_dungeon(struct map *cur_map);
 static void	add_junk(struct map *cur_map);
+static void	ladder_facing(struct map *cur_map);
 
 void
 init_map(struct map *cur_map, int rows, int cols)
@@ -93,6 +94,8 @@ populate_map(struct map *cur_map, int row_start, int col_start)
 	*(*(cur_map->tiles + room->row) + room->col) = END;
 	cur_map->end.row = room->row;
 	cur_map->end.col = room->col;
+	/* Set ladder facing direction */
+	ladder_facing(cur_map);
 	/* Remove some random walls, add doors, and add junk */
 	make_dungeon(cur_map);
 	add_junk(cur_map);
@@ -249,12 +252,32 @@ add_junk(struct map *cur_map)
 			if (*(*(cur_map->tiles + i) + j) == ROOM && rand_num(0, 99) >= 94) {
 				*(*(cur_map->junk + i) + j) = 1;
 				facing = rand_num(NORTH, WEST);
-				*(*(cur_map->junk_face + i) + j) = facing;
 				while (*(*(cur_map->tiles + i + row_d[facing]) + j + col_d[facing]) == WALL) {
 					facing = rand_num(NORTH, WEST);
-					*(*(cur_map->junk_face + i) + j) = facing;
 				}
+				*(*(cur_map->junk_face + i) + j) = facing;
 			}
 		}
 	}	
+}
+
+static void
+ladder_facing(struct map *cur_map)
+{
+	int facing;
+	int row_d[4] = { -1, 0, 1, 0 };
+	int col_d[4] = { 0, 1, 0, -1 };
+	
+	/* Generate start ladder facing direction */
+	facing = rand_num(NORTH, WEST);
+	while (*(*(cur_map->tiles + cur_map->start.row + row_d[facing]) + cur_map->start.col + col_d[facing]) == WALL) {
+		facing = rand_num(NORTH, WEST);
+	}
+	cur_map->start_face = facing;
+	/* Generate end ladder facing direction */
+	facing = rand_num(NORTH, WEST);
+	while (*(*(cur_map->tiles + cur_map->end.row + row_d[facing]) + cur_map->end.col + col_d[facing]) == WALL) {
+		facing = rand_num(NORTH, WEST);
+	}
+	cur_map->end_face = facing;
 }

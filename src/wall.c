@@ -13,9 +13,10 @@ static void	get_coords(struct user *cur_user, struct coords *cur_wall, int forwa
 static void	set_walls(struct user *cur_user, struct coords walls[25]);
 static void	set_junk(struct user *cur_user, struct coords junk[9]);
 static void	check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25]);
-static void	check_junk(struct game *cur_game, struct user *cur_user, struct coords junk[9]);
+static void	check_junk_and_ladders(struct game *cur_game, struct user *cur_user, struct coords junk[9]);
 static void	draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, struct coords *wall_coords, int wall_num, int sprite_num);
-static void	draw_junk(struct game *cur_game, SDL_Texture **junk, int junk_num);
+static void	draw_junk(struct game *cur_game, int junk_num);
+static void	draw_ladder(struct game *cur_game, int ladder_num);
 
 void
 draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
@@ -59,9 +60,9 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 					draw_rect(cur_game, x + x_coord * 20 - 1, y + y_coord * 20 + 1, 3, 19, SDL_TRUE, "white");
 				}
 				if (cur_game->maps[map_num].tiles[i][j] == START) {
-					draw_sprites(cur_game, cur_game->sprites.arrows, 4, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
+					draw_sprites(cur_game, cur_game->sprites.arrows, 4, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE, SDL_FALSE);
 				} else if (cur_game->maps[map_num].tiles[i][j] == END) {
-					draw_sprites(cur_game, cur_game->sprites.arrows, 5, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
+					draw_sprites(cur_game, cur_game->sprites.arrows, 5, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE, SDL_FALSE);
 				}
 			} else {
 				/* Draw a small white square if the room has not been seen */
@@ -71,7 +72,7 @@ draw_map(struct game *cur_game, struct user *cur_user, int x, int y)
 	}
 	/* Draw the player arrow */
 	x_coord = cur_user->col/2; y_coord = cur_user->row/2;
-	draw_sprites(cur_game, cur_game->sprites.arrows, cur_user->facing, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE);
+	draw_sprites(cur_game, cur_game->sprites.arrows, cur_user->facing, x + x_coord * 20 + 2, y + y_coord * 20 + 2, 16, 16, 255, SDL_FALSE, SDL_FALSE);
 }
 
 static void
@@ -105,7 +106,7 @@ get_coords(struct user *cur_user, struct coords *cur_wall, int forward, int side
  *	XX .. XX ..  0 pl  1 .. XX .. XX
  */
  
- /* Key for junk (8 = pl):
+ /* Key for junk and ladders (8 = pl):
   *
   *     XX XX XX XX XX XX XX XX XX XX XX
   *     XX  0 XX  1 XX  2 XX  3 XX  4 XX
@@ -160,20 +161,6 @@ set_junk(struct user *cur_user, struct coords junk[9])
 	get_coords(cur_user, &junk[8], 0, 0);
 }
 
-static void
-check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25])
-{
-	int i;
-	for (i = 0; i < 25; i++) {
-		if (walls[i].row < 0 || walls[i].row > cur_game->maps[cur_user->map].rows - 1 ||
-		    walls[i].col < 0 || walls[i].col > cur_game->maps[cur_user->map].cols - 1) {
-		    	/* Wall outside of range, set to user position (ROOM) */
-		    	walls[i].row = cur_user->row;
-		    	walls[i].col = cur_user->col;
-		}
-	}
-}
-
 struct wall_dim {
 	int wall_num;
 	int sprite;
@@ -208,6 +195,20 @@ struct wall_dim {
 	{ 24, 0, SDL_FALSE, 192, { 651, 299, 125, 100 } }
 };
 
+static void
+check_walls(struct game *cur_game, struct user *cur_user, struct coords walls[25])
+{
+	int i;
+	for (i = 0; i < 25; i++) {
+		if (walls[i].row < 0 || walls[i].row > cur_game->maps[cur_user->map].rows - 1 ||
+		    walls[i].col < 0 || walls[i].col > cur_game->maps[cur_user->map].cols - 1) {
+		    	/* Wall outside of range, set to user position (ROOM) */
+		    	walls[i].row = cur_user->row;
+		    	walls[i].col = cur_user->col;
+		}
+	}
+}
+
 struct junk_dim {
 	int junk_num;
 	int sprite;
@@ -226,17 +227,43 @@ struct junk_dim {
 	{ 8, 0, 0, 80, { 335, 421, 256, 256 } }
 };
 
+struct ladder_dim {
+	int ladder_num;
+	int sprite;
+	int overlay;
+	SDL_bool flip;
+	SDL_Rect dim;
+} ladder_dim[9] = {
+	{ 0, 0, 224, SDL_FALSE, { 86, 257, 64, 192 } },
+	{ 1, 0, 208, SDL_FALSE, { 275, 257, 64, 192 } },
+	{ 2, 0, 192, SDL_FALSE, { 432, 257, 64, 192 } },
+	{ 3, 0, 208, SDL_FALSE, { 589, 257, 64, 192 } },
+	{ 4, 0, 224, SDL_FALSE, { 778, 257, 64, 192 } },
+	{ 5, 0, 144, SDL_FALSE, { 117, 160, 128, 384 } }, 
+	{ 6, 0, 128, SDL_FALSE, { 399, 160, 128, 384 } }, 
+	{ 7, 0, 144, SDL_FALSE, { 681, 160, 128, 384 } },
+	{ 8, 0, 80, SDL_FALSE, { 335, -5, 256, 768 } }
+};
+
 static void
-check_junk(struct game *cur_game, struct user *cur_user, struct coords junk[9])
+check_junk_and_ladders(struct game *cur_game, struct user *cur_user, struct coords junk[9])
 {
 	int i;
 	int facing;
+	int ladder;
+	int *ladder_facing;
+	
+	/* Populate the junk_dim and ladder_dim structures with appropriate sprites */
 	for (i = 0; i < 9; i++) {
 		if (junk[i].row < 0 || junk[i].row > cur_game->maps[cur_user->map].rows - 1 ||
 		    junk[i].col < 0 || junk[i].col > cur_game->maps[cur_user->map].cols - 1) {
 		    	/* Junk outside of range */
 			junk_dim[i].sprite = 0;
-		} else if (*(*(cur_game->maps[cur_user->map].junk + junk[i].row) + junk[i].col) != 0) {
+			ladder_dim[i].sprite = 0;
+			continue;
+		}
+		/* Is there junk in the trunk? */
+		if (*(*(cur_game->maps[cur_user->map].junk + junk[i].row) + junk[i].col) != 0) {
 			facing = *(*(cur_game->maps[cur_user->map].junk_face + junk[i].row) + junk[i].col);
 			if (facing == cur_user->facing) {
 				junk_dim[i].sprite = *(*(cur_game->maps[cur_user->map].junk + junk[i].row) + junk[i].col) + 3;
@@ -249,6 +276,29 @@ check_junk(struct game *cur_game, struct user *cur_user, struct coords junk[9])
 			}
 		} else {
 			junk_dim[i].sprite = 0;
+		}
+		/* Is there a ladder in the bladder? */
+		ladder = *(*(cur_game->maps[cur_user->map].tiles + junk[i].row) + junk[i].col);
+		if (ladder == START || ladder == END) {
+			if (ladder == START) {
+				ladder_facing = &cur_game->maps[cur_user->map].start_face;
+				ladder_dim[i].flip = SDL_TRUE;
+			} else if (ladder == END) {
+				ladder_facing = &cur_game->maps[cur_user->map].end_face;
+				ladder_dim[i].flip = SDL_FALSE;
+			}
+			/* Adjust the sprite according to which direction the ladder is facing */
+			if (*ladder_facing == cur_user->facing) {
+				ladder_dim[i].sprite = 1 + 1;
+			} else if (*ladder_facing == cur_user->facing + 1 || *ladder_facing == cur_user->facing - 3) {
+				ladder_dim[i].sprite = 1 + 3;
+			} else if (*ladder_facing == cur_user->facing + 2 || *ladder_facing == cur_user->facing - 2) {
+				ladder_dim[i].sprite = 1 + 0;
+			} else if (*ladder_facing == cur_user->facing + 3 || *ladder_facing == cur_user->facing - 1) {
+				ladder_dim[i].sprite = 1 + 2;
+			}
+		} else {
+			ladder_dim[i].sprite = 0;
 		}
 	}
 }
@@ -270,7 +320,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.w,
 				     wall_dim[wall_num].dim.h,
 				     255,
-				     wall_dim[wall_num].flip);
+				     wall_dim[wall_num].flip, SDL_FALSE);
 			draw_sprites(cur_game, walls,
 				     sprite_num + wall_dim[wall_num].sprite,
 				     wall_dim[wall_num].dim.x + x_val,
@@ -278,7 +328,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.w,
 				     wall_dim[wall_num].dim.h,
 				     wall_dim[wall_num].overlay,
-				     wall_dim[wall_num].flip);
+				     wall_dim[wall_num].flip, SDL_FALSE);
 			break;
 		case DOOR:
 			draw_sprites(cur_game, walls,
@@ -288,7 +338,7 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.w,
 				     wall_dim[wall_num].dim.h,
 				     255,
-				     wall_dim[wall_num].flip);
+				     wall_dim[wall_num].flip, SDL_FALSE);
 			draw_sprites(cur_game, walls,
 				     sprite_num + wall_dim[wall_num].sprite + 2,
 				     wall_dim[wall_num].dim.x + x_val,
@@ -296,30 +346,51 @@ draw_wall(struct game *cur_game, struct user *cur_user, SDL_Texture **walls, str
 				     wall_dim[wall_num].dim.w,
 				     wall_dim[wall_num].dim.h,
 				     wall_dim[wall_num].overlay,
-				     wall_dim[wall_num].flip);
+				     wall_dim[wall_num].flip, SDL_FALSE);
 			break;
 	}
 }
 
 static void
-draw_junk(struct game *cur_game, SDL_Texture **junk, int junk_num)
+draw_junk(struct game *cur_game, int junk_num)
 {
 	int x_val = 342;
 	int y_val = 11;
 	
 	if (junk_dim[junk_num].sprite != 0) {
-		draw_sprites(cur_game, junk, junk_dim[junk_num].sprite - 1 + 12 + junk_dim[junk_num].sprite_add,
+		draw_sprites(cur_game, cur_game->sprites.junk, junk_dim[junk_num].sprite - 1 + 12 + junk_dim[junk_num].sprite_add,
 		junk_dim[junk_num].dim.x + x_val,
 		junk_dim[junk_num].dim.y + y_val,
 		junk_dim[junk_num].dim.w,
 		junk_dim[junk_num].dim.h,
-		255, SDL_FALSE);
-		draw_sprites(cur_game, junk, junk_dim[junk_num].sprite - 1 + junk_dim[junk_num].sprite_add,
+		255, SDL_FALSE, SDL_FALSE);
+		draw_sprites(cur_game, cur_game->sprites.junk, junk_dim[junk_num].sprite - 1 + junk_dim[junk_num].sprite_add,
 		junk_dim[junk_num].dim.x + x_val,
 		junk_dim[junk_num].dim.y + y_val,
 		junk_dim[junk_num].dim.w,
 		junk_dim[junk_num].dim.h,
-		junk_dim[junk_num].overlay, SDL_FALSE);
+		junk_dim[junk_num].overlay, SDL_FALSE, SDL_FALSE);
+	}
+}
+
+static void
+draw_ladder(struct game *cur_game, int ladder_num)
+{
+	int x_val = 342;
+	int y_val = 11;
+	if (ladder_dim[ladder_num].sprite != 0) {
+		draw_sprites(cur_game, cur_game->sprites.ladders, ladder_dim[ladder_num].sprite - 1 + 4,
+		ladder_dim[ladder_num].dim.x + x_val,
+		ladder_dim[ladder_num].dim.y + y_val,
+		ladder_dim[ladder_num].dim.w,
+		ladder_dim[ladder_num].dim.h,
+		255, SDL_FALSE, ladder_dim[ladder_num].flip);
+		draw_sprites(cur_game, cur_game->sprites.ladders, ladder_dim[ladder_num].sprite - 1,
+		ladder_dim[ladder_num].dim.x + x_val,
+		ladder_dim[ladder_num].dim.y + y_val,
+		ladder_dim[ladder_num].dim.w,
+		ladder_dim[ladder_num].dim.h,
+		ladder_dim[ladder_num].overlay, SDL_FALSE, ladder_dim[ladder_num].flip);
 	}
 }
 
@@ -337,22 +408,24 @@ draw_view(struct game *cur_game, struct user *cur_user)
 	SDL_RenderClear(cur_game->display.renderer);
 	/* Draw background */
 	draw_rect(cur_game, 342, 11, 927, 698, SDL_TRUE, "black");
-	draw_sprites(cur_game, cur_game->sprites.floors, cur_game->maps[cur_user->map].sprite, 342, 11, 927, 698, 255, SDL_FALSE);
-	/* Determine values for all walls and junk depending on user facing */
+	draw_sprites(cur_game, cur_game->sprites.floors, cur_game->maps[cur_user->map].sprite, 342, 11, 927, 698, 255, SDL_FALSE, SDL_FALSE);
+	/* Determine values for all walls, junk, and ladders depending on user facing */
 	set_walls(cur_user, walls);
 	set_junk(cur_user, junk);
-	/* Make sure the walls and junk are within the map range */
+	/* Make sure the walls, junk, and ladders are within the map range */
 	check_walls(cur_game, cur_user, walls);
-	check_junk(cur_game, cur_user, junk);
+	check_junk_and_ladders(cur_game, cur_user, junk);
 	/* Draw all walls and junk */
 	for (i = 0; i < 25; i++) {
 		draw_wall(cur_game, cur_user, cur_game->sprites.walls, walls, draw_order[i], cur_game->maps[cur_user->map].sprite);
 		if (draw_order_junk[i] != -1) {
-			draw_junk(cur_game, cur_game->sprites.junk, draw_order_junk[i]);
+			draw_junk(cur_game, draw_order_junk[i]);
+			draw_ladder(cur_game, draw_order_junk[i]);
 		}
 	}
-	/* Draw junk on the player square */
-	draw_junk(cur_game, cur_game->sprites.junk, 8);
+	/* Draw junk and ladder on the player square */
+	draw_junk(cur_game, 8);
+	draw_ladder(cur_game, 8);
 	/* Output white outline */
 	draw_rect(cur_game, 341, 10, 929, 700, SDL_FALSE, "white");
 	/* Reset the render target */
